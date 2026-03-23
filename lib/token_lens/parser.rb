@@ -169,7 +169,13 @@ module TokenLens
         JSON.parse(content).map { |e| e["event"] }
       else
         # Raw JSONL: newline-delimited events from ~/.claude/projects/*/...jsonl
-        content.each_line.filter_map { |line| JSON.parse(line) rescue nil }
+        content.each_line.filter_map { |line|
+          begin
+            JSON.parse(line)
+          rescue
+            nil
+          end
+        }
       end
     rescue => e
       raise TokenLens::ParseError, "Failed to parse #{@file_path}: #{e.message}"

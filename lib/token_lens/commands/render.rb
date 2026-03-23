@@ -10,7 +10,7 @@ require "token_lens/session"
 module TokenLens
   module Commands
     class Render
-      def initialize(file_path: nil, output:)
+      def initialize(output:, file_path: nil)
         @file_path = file_path
         @output = output
       end
