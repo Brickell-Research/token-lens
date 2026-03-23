@@ -5,7 +5,17 @@ module TokenLens
     class Reshaper
       def reshape(nodes)
         nodes = collapse_streaming(nodes)
-        nodes.flat_map { |node| process_root(node) }
+        # Process roots iteratively so that human prompts discovered mid-thread
+        # (nested inside an assistant chain) are hoisted to the top level rather
+        # than stacked as children of the prompt that preceded them.
+        @pending_roots = nodes.dup
+        result = []
+        while @pending_roots.any?
+          batch = @pending_roots
+          @pending_roots = []
+          result += batch.flat_map { |node| process_root(node) }
+        end
+        result
       end
 
       private
@@ -58,11 +68,17 @@ module TokenLens
       # Flatten a linear user→assistant→user(tool_result)→assistant chain into
       # a flat list of assistant siblings, computing marginal_input_tokens deltas.
       # Sidechain children stay nested under the assistant that spawned them.
-      def flatten_thread(nodes, prev_input:)
+      #
+      # through_assistant: tracks whether we've passed at least one assistant turn.
+      # A human prompt encountered BEFORE any assistant (e.g. a screenshot attached
+      # to the same user turn) is treated as transparent — we recurse into its
+      # children rather than hoisting it. A human prompt encountered AFTER an
+      # assistant is a genuine new conversational turn and gets hoisted.
+      def flatten_thread(nodes, prev_input:, through_assistant: false)
         nodes.flat_map do |node|
           t = node[:token]
           if t.role == "user" && !t.is_human_prompt?
-            flatten_thread(node[:children], prev_input: prev_input)
+            flatten_thread(node[:children], prev_input: prev_input, through_assistant: through_assistant)
           elsif t.role == "assistant"
             marginal = [t.input_tokens - prev_input, 0].max
             compaction = prev_input > 0 && t.input_tokens < prev_input * 0.5
@@ -77,9 +93,15 @@ module TokenLens
               token: t.with(marginal_input_tokens: marginal, is_compaction: compaction),
               children: sidechain
             )
-            [updated] + flatten_thread(chain, prev_input: t.input_tokens)
+            [updated] + flatten_thread(chain, prev_input: t.input_tokens, through_assistant: true)
+          elsif through_assistant
+            # Human prompt after an assistant — genuine new turn, hoist to top level.
+            @pending_roots << node
+            []
           else
-            process_root(node)
+            # Human prompt before any assistant (consecutive user messages, e.g. an
+            # image attachment). Treat as transparent and continue into its children.
+            flatten_thread(node[:children], prev_input: prev_input, through_assistant: false)
           end
         end
       end

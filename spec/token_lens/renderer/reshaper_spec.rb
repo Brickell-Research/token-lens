@@ -58,6 +58,21 @@ RSpec.describe TokenLens::Renderer::Reshaper do
       expect(siblings[1][:token].marginal_input_tokens).to eq(200) # 300 - 100
     end
 
+    it "hoists nested human prompts to separate top-level roots" do
+      a2 = node(token(role: "assistant", input: 200))
+      p2 = node(token(role: "user", text: "follow-up"), children: [a2])
+      a1 = node(token(role: "assistant", input: 100), children: [p2])
+      p1 = node(token(role: "user", text: "initial"), children: [a1])
+
+      result = reshaper.reshape([p1])
+
+      expect(result.length).to eq(2)
+      expect(result[0][:token].human_text).to eq("initial")
+      expect(result[0][:children].map { |c| c[:token].role }).to eq(["assistant"])
+      expect(result[1][:token].human_text).to eq("follow-up")
+      expect(result[1][:children].map { |c| c[:token].role }).to eq(["assistant"])
+    end
+
     it "preserves multiple human prompt roots as separate groups" do
       a1 = node(token(role: "assistant", input: 100))
       a2 = node(token(role: "assistant", input: 200))
