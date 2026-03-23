@@ -6,8 +6,9 @@ require "token_lens/sources/jsonl"
 module TokenLens
   module Commands
     class Record
-      def initialize(duration_in_seconds:)
+      def initialize(duration_in_seconds:, project_dir: nil)
         @duration_in_seconds = duration_in_seconds
+        @project_dir = project_dir
       end
 
       def run
@@ -16,7 +17,7 @@ module TokenLens
         queue = Queue.new
         events = []
 
-        thread = Thread.new { Sources::Jsonl.new(queue).start }
+        thread = Thread.new { Sources::Jsonl.new(queue, project_dir: @project_dir).start }
         drain_thread = Thread.new { loop { events << queue.pop } }
 
         trap("INT") { finish(thread, drain_thread, queue, events) }

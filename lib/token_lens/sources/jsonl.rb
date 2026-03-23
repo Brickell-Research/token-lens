@@ -6,9 +6,9 @@ require "token_lens/session"
 module TokenLens
   module Sources
     class Jsonl
-      def initialize(queue)
+      def initialize(queue, project_dir: nil)
         @queue = queue
-        @path = Session.active_jsonl
+        @path = project_dir ? Session.active_jsonl(project_dir) : Session.active_or_latest_jsonl
       end
 
       def start

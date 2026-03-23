@@ -16,13 +16,26 @@ module TokenLens
 
     def self.active_jsonl(dir = Dir.pwd)
       project_dir = CLAUDE_DIR / encoded_cwd(dir)
-
-      # find all *.jsonl files in the project directory
       jsonl_files = project_dir.glob("*.jsonl")
       raise "No session files found in #{project_dir}" if jsonl_files.empty?
-
-      # get most recently modified file
       jsonl_files.max_by(&:mtime)
+    end
+
+    # Returns the most recently modified session file across ALL projects.
+    def self.latest_jsonl
+      all = CLAUDE_DIR.glob("*/*.jsonl")
+      raise "No session files found in #{CLAUDE_DIR}" if all.empty?
+      all.max_by(&:mtime)
+    end
+
+    # Like active_jsonl but falls back to latest_jsonl with a warning when
+    # the current directory has no sessions (e.g. running from ~/Desktop).
+    def self.active_or_latest_jsonl(dir = Dir.pwd)
+      active_jsonl(dir)
+    rescue RuntimeError
+      path = latest_jsonl
+      warn "  [session] no sessions for #{dir}, using most recent: #{path}"
+      path
     end
 
     def self.tail(path, &block)
