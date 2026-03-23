@@ -5,6 +5,7 @@
       "uuid": "msg-001",
       "parentUuid": null,
       "type": "user",
+      "timestamp": "2026-03-23T10:00:00.000Z",
       "message": {
         "role": "user",
         "content": [{"type": "text", "text": "How does the parser work?"}],
@@ -18,8 +19,10 @@
       "uuid": "msg-002",
       "parentUuid": "msg-001",
       "type": "assistant",
+      "timestamp": "2026-03-23T10:00:01.500Z",
       "message": {
         "role": "assistant",
+        "model": "claude-opus-4-6",
         "content": [
           {"type": "text", "text": "Let me check the lib directory."},
           {"type": "tool_use", "id": "tool-001", "name": "Bash", "input": {"command": "ls lib/"}}
@@ -34,28 +37,12 @@
     }
   },
   {
-    "source": "otlp",
-    "event": {
-      "timeUnixNano": "1711234567000000000",
-      "severityText": "INFO",
-      "body": {"stringValue": "API request completed"},
-      "traceId": "trace-001",
-      "spanId": "span-001",
-      "attributes": [
-        {"key": "gen_ai.usage.input_tokens",               "value": {"intValue": "800"}},
-        {"key": "gen_ai.usage.output_tokens",              "value": {"intValue": "150"}},
-        {"key": "gen_ai.usage.cache_read_input_tokens",    "value": {"intValue": "0"}},
-        {"key": "gen_ai.usage.cache_creation_input_tokens","value": {"intValue": "400"}},
-        {"key": "gen_ai.request.model",                    "value": {"stringValue": "claude-opus-4-6"}}
-      ]
-    }
-  },
-  {
     "source": "jsonl",
     "event": {
       "uuid": "msg-003",
       "parentUuid": "msg-002",
       "type": "user",
+      "timestamp": "2026-03-23T10:00:01.600Z",
       "message": {
         "role": "user",
         "content": [
@@ -71,8 +58,10 @@
       "uuid": "msg-004",
       "parentUuid": "msg-003",
       "type": "assistant",
+      "timestamp": "2026-03-23T10:00:03.200Z",
       "message": {
         "role": "assistant",
+        "model": "claude-opus-4-6",
         "content": [
           {"type": "text", "text": "Let me read the parser."},
           {"type": "tool_use", "id": "tool-002", "name": "Read", "input": {"file_path": "lib/token_lens/parser.rb"}}
@@ -87,28 +76,12 @@
     }
   },
   {
-    "source": "otlp",
-    "event": {
-      "timeUnixNano": "1711234570000000000",
-      "severityText": "INFO",
-      "body": {"stringValue": "API request completed"},
-      "traceId": "trace-002",
-      "spanId": "span-002",
-      "attributes": [
-        {"key": "gen_ai.usage.input_tokens",               "value": {"intValue": "1200"}},
-        {"key": "gen_ai.usage.output_tokens",              "value": {"intValue": "200"}},
-        {"key": "gen_ai.usage.cache_read_input_tokens",    "value": {"intValue": "800"}},
-        {"key": "gen_ai.usage.cache_creation_input_tokens","value": {"intValue": "0"}},
-        {"key": "gen_ai.request.model",                    "value": {"stringValue": "claude-opus-4-6"}}
-      ]
-    }
-  },
-  {
     "source": "jsonl",
     "event": {
       "uuid": "msg-005",
       "parentUuid": "msg-004",
       "type": "user",
+      "timestamp": "2026-03-23T10:00:03.300Z",
       "message": {
         "role": "user",
         "content": [
@@ -124,8 +97,10 @@
       "uuid": "msg-006",
       "parentUuid": "msg-005",
       "type": "assistant",
+      "timestamp": "2026-03-23T10:00:05.800Z",
       "message": {
         "role": "assistant",
+        "model": "claude-opus-4-6",
         "content": [
           {"type": "text", "text": "The parser reads JSONL and OTLP events and splits them by source."}
         ],
@@ -139,28 +114,12 @@
     }
   },
   {
-    "source": "otlp",
-    "event": {
-      "timeUnixNano": "1711234575000000000",
-      "severityText": "INFO",
-      "body": {"stringValue": "API request completed"},
-      "traceId": "trace-003",
-      "spanId": "span-003",
-      "attributes": [
-        {"key": "gen_ai.usage.input_tokens",               "value": {"intValue": "2000"}},
-        {"key": "gen_ai.usage.output_tokens",              "value": {"intValue": "350"}},
-        {"key": "gen_ai.usage.cache_read_input_tokens",    "value": {"intValue": "1600"}},
-        {"key": "gen_ai.usage.cache_creation_input_tokens","value": {"intValue": "0"}},
-        {"key": "gen_ai.request.model",                    "value": {"stringValue": "claude-opus-4-6"}}
-      ]
-    }
-  },
-  {
     "source": "jsonl",
     "event": {
       "uuid": "msg-007",
       "parentUuid": null,
       "type": "user",
+      "timestamp": "2026-03-23T10:01:00.000Z",
       "message": {
         "role": "user",
         "content": [{"type": "text", "text": "Now write a test for it."}],
@@ -174,11 +133,11 @@
       "uuid": "msg-008",
       "parentUuid": "msg-007",
       "type": "assistant",
+      "timestamp": "2026-03-23T10:01:02.100Z",
       "message": {
         "role": "assistant",
-        "content": [
-          {"type": "text", "text": "Here is the test."}
-        ],
+        "model": "claude-opus-4-6",
+        "content": [{"type": "text", "text": "Here is the test."}],
         "usage": {
           "input_tokens": 500,
           "output_tokens": 100,
@@ -186,23 +145,6 @@
           "cache_creation_input_tokens": 0
         }
       }
-    }
-  },
-  {
-    "source": "otlp",
-    "event": {
-      "timeUnixNano": "1711234580000000000",
-      "severityText": "INFO",
-      "body": {"stringValue": "API request completed"},
-      "traceId": "trace-004",
-      "spanId": "span-004",
-      "attributes": [
-        {"key": "gen_ai.usage.input_tokens",               "value": {"intValue": "500"}},
-        {"key": "gen_ai.usage.output_tokens",              "value": {"intValue": "100"}},
-        {"key": "gen_ai.usage.cache_read_input_tokens",    "value": {"intValue": "2400"}},
-        {"key": "gen_ai.usage.cache_creation_input_tokens","value": {"intValue": "0"}},
-        {"key": "gen_ai.request.model",                    "value": {"stringValue": "claude-opus-4-6"}}
-      ]
     }
   }
 ]
