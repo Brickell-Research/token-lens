@@ -11,7 +11,7 @@ RSpec.describe TokenLens::Renderer::Svg do
     content = tool_name ? [{"type" => "tool_use", "id" => "t1", "name" => tool_name}] : []
     token = TokenLens::Tokens::Jsonl.new(
       uuid: "test-uuid", parent_uuid: nil, type: "assistant",
-      role: role, content: content, input_tokens: input_tokens,
+      role: role, model: nil, is_sidechain: false, content: content, input_tokens: input_tokens,
       output_tokens: output_tokens, cache_read_tokens: 0, cache_creation_tokens: 0
     )
     {token: token, children: children}
@@ -50,13 +50,11 @@ RSpec.describe TokenLens::Renderer::Svg do
     expect(result).to include(TokenLens::Renderer::Svg::COLORS[:user])
   end
 
-  it "omits text for narrow nodes" do
-    # two nodes where one will be very narrow
-    wide = node(input_tokens: 10_000)
-    narrow = node(input_tokens: 1)
+  it "hides text for narrow nodes" do
+    wide = node(input_tokens: 975)
+    narrow = node(input_tokens: 25)
     result = render_tree([wide, narrow])
-    text_count = result.scan("<text").length
-    expect(text_count).to be < 3
+    expect(result).to include('display="none"')
   end
 
   it "labels tool nodes with the tool name" do

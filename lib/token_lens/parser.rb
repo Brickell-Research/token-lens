@@ -4,6 +4,8 @@ require "json"
 require "token_lens/tokens/jsonl"
 
 module TokenLens
+  class ParseError < StandardError; end
+
   class Parser
     def initialize(file_path:)
       @file_path = file_path
@@ -11,7 +13,9 @@ module TokenLens
 
     def parse
       events = JSON.parse(read_file)
-      tokens = events.map { |e| Tokens::Jsonl.from_raw(e["event"]) }
+      tokens = events
+        .map { |e| Tokens::Jsonl.from_raw(e["event"]) }
+        .select { |t| t.type == "user" || t.type == "assistant" }
       build_tree(tokens)
     end
 

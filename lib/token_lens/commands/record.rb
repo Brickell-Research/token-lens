@@ -11,7 +11,7 @@ module TokenLens
       end
 
       def run
-        warn "Recording for #{@duration_in_seconds}s..."
+        warn "Recording for #{@duration_in_seconds}s... (Ctrl+C to stop early)"
 
         queue = Queue.new
         events = []
@@ -19,14 +19,22 @@ module TokenLens
         thread = Thread.new { Sources::Jsonl.new(queue).start }
         drain_thread = Thread.new { loop { events << queue.pop } }
 
-        sleep @duration_in_seconds
+        trap("INT") { finish(thread, drain_thread, queue, events) }
+        trap("TERM") { finish(thread, drain_thread, queue, events) }
 
+        sleep @duration_in_seconds
+        finish(thread, drain_thread, queue, events)
+      end
+
+      private
+
+      def finish(thread, drain_thread, queue, events)
         thread.kill
         drain_thread.kill
         events << queue.pop until queue.empty?
-
-        warn "Captured #{events.size} events"
+        warn "\nCaptured #{events.size} events"
         $stdout.puts JSON.generate(events)
+        exit 0
       end
     end
   end

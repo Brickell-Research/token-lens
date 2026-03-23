@@ -6,6 +6,7 @@ vendor/
 *.json
 *.jsonl
 !spec/fixtures/**/*.json
+flame.svg
 
 # Ruby
 *.gem

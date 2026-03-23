@@ -9,7 +9,7 @@ RSpec.describe TokenLens::Renderer::Layout do
   def node(input_tokens: 0, output_tokens: 0, role: "assistant", children: [])
     token = TokenLens::Tokens::Jsonl.new(
       uuid: "test-uuid", parent_uuid: nil, type: "assistant",
-      role: role, content: [], input_tokens: input_tokens,
+      role: role, model: nil, is_sidechain: false, content: [], input_tokens: input_tokens,
       output_tokens: output_tokens, cache_read_tokens: 0, cache_creation_tokens: 0
     )
     {token: token, children: children}

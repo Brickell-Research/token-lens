@@ -3,7 +3,6 @@
 require "json"
 require "token_lens/parser"
 
-
 module TokenLens
   module Commands
     class Parse

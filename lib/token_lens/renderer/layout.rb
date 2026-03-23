@@ -12,7 +12,7 @@ module TokenLens
 
       def layout(nodes)
         total = nodes.sum { |n| n[:subtree_tokens] }
-        scale = total > 0 ? @canvas_width.to_f / total : 1.0
+        scale = (total > 0) ? @canvas_width.to_f / total : 1.0
         position(nodes, x: 0, scale: scale)
         nodes
       end
