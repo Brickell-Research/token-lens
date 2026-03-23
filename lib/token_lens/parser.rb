@@ -12,7 +12,7 @@ module TokenLens
     end
 
     def parse
-      raw_events = JSON.parse(read_file).map { |e| e["event"] }
+      raw_events = read_raw_events
       tokens = raw_events
         .map { |e| Tokens::Jsonl.from_raw(e) }
         .select { |t| t.type == "user" || t.type == "assistant" }
@@ -160,6 +160,19 @@ module TokenLens
 
     def flatten_nodes(nodes)
       nodes.flat_map { |n| [n, *flatten_nodes(n[:children])] }
+    end
+
+    def read_raw_events
+      content = read_file
+      if content.lstrip.start_with?("[")
+        # Captured format: JSON array of {"event": {...}} wrappers produced by `record`
+        JSON.parse(content).map { |e| e["event"] }
+      else
+        # Raw JSONL: newline-delimited events from ~/.claude/projects/*/...jsonl
+        content.each_line.filter_map { |line| JSON.parse(line) rescue nil }
+      end
+    rescue => e
+      raise TokenLens::ParseError, "Failed to parse #{@file_path}: #{e.message}"
     end
 
     def read_file

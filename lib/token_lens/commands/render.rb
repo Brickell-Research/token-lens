@@ -5,6 +5,7 @@ require "token_lens/renderer/reshaper"
 require "token_lens/renderer/annotator"
 require "token_lens/renderer/layout"
 require "token_lens/renderer/html"
+require "token_lens/session"
 
 module TokenLens
   module Commands
@@ -31,9 +32,10 @@ module TokenLens
       def resolve_path
         return @file_path if @file_path
         sessions = Pathname.new(Dir.home).join(".token-lens", "sessions")
-        all = sessions.glob("*.json").sort_by(&:mtime)
-        raise "No saved sessions found in #{sessions}. Run `token-lens record` first." if all.empty?
-        all.last
+        saved = sessions.glob("*.json").max_by(&:mtime)
+        return saved if saved
+        warn "No saved captures found — reading active Claude Code session directly"
+        Session.latest_jsonl
       end
     end
   end

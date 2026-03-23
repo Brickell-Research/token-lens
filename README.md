@@ -23,19 +23,44 @@ Record Data --> Interpret Data --> Render Data
 
 ## Quick Start
 
+### Zero setup — render any session right now
 
-**Locally**:
+No recording needed. token-lens reads directly from Claude Code's session files:
+
 ```
-bin/token-lens record --duration-in-seconds=30 > capture.json
-bin/token-lens render --file-path=capture.json
+gem install token-lens
+token-lens render
 open flame.html
 ```
 
-**Via gem**:
+That's it. `render` with no arguments finds your most recent Claude Code session and renders it as a flame graph — no prior setup, no capture file, no extra terminal.
+
+### Record a live session
+
+If you want to capture a bounded window while you work (useful for comparing before/after):
+
 ```
-gem install token-lens
-token-lens record --duration-in-seconds=30 > capture.json
-token-lens render --file-path=capture.json
+token-lens record --duration-in-seconds=60
+# ... do your Claude Code work in another terminal ...
+token-lens render
+open flame.html
+```
+
+Captures auto-save to `~/.token-lens/sessions/<timestamp>.json`. `render` always picks the most recent capture first, then falls back to the live session JSONL if no captures exist.
+
+### Options
+
+```
+token-lens record --duration-in-seconds=300   # record for 5 minutes
+token-lens record --output=my-session.json    # save to a specific path
+token-lens render --file-path=my-session.json # render a specific capture
+token-lens render --output=report.html        # write HTML to a custom path
+```
+
+### Locally
+
+```
+bin/token-lens render
 open flame.html
 ```
 
