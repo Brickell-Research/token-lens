@@ -2,7 +2,6 @@
 
 require "thor"
 require "token_lens/commands/record"
-require "token_lens/commands/parse"
 require "token_lens/commands/render"
 
 module TokenLens
@@ -13,17 +12,11 @@ module TokenLens
       Commands::Record.new(duration_in_seconds: options[:duration_in_seconds]).run
     end
 
-    desc "render", "Render a captured session as a flame graph SVG"
+    desc "render", "Render a captured session as a flame graph"
     option :file_path, type: :string, required: true, desc: "Path to the captured JSON file"
-    option :output, type: :string, default: "flame.svg", desc: "Output SVG path"
+    option :output, type: :string, default: "flame.html", desc: "Output HTML path"
     def render
       Commands::Render.new(file_path: options[:file_path], output: options[:output]).run
-    end
-
-    desc "parse", "Parse a token-lens JSON file"
-    option :file_path, type: :string, desc: "Path to the JSON file to parse"
-    def parse
-      Commands::Parse.new(file_path: options[:file_path]).run
     end
   end
 end

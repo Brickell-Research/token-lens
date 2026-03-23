@@ -1,0 +1,78 @@
+name: Check Anthropic pricing
+
+on:
+  schedule:
+    - cron: "0 9 * * 1" # Every Monday at 9am UTC
+  workflow_dispatch: # Allow manual runs
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+          bundler-cache: true
+
+      - name: Run pricing check
+        id: check
+        run: |
+          if ruby .github/scripts/check_pricing.rb > /tmp/pricing_report.txt 2>&1; then
+            echo "status=ok" >> "$GITHUB_OUTPUT"
+            cat /tmp/pricing_report.txt
+          else
+            echo "status=changed" >> "$GITHUB_OUTPUT"
+            cat /tmp/pricing_report.txt
+          fi
+
+      - name: Open issue if prices changed
+        if: steps.check.outputs.status == 'changed'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('/tmp/pricing_report.txt', 'utf8');
+
+            // Close any existing open pricing issues to avoid duplicates
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'pricing',
+              state: 'open'
+            });
+            for (const issue of existing.data) {
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                state: 'closed'
+              });
+            }
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '⚠️ Anthropic pricing may have changed',
+              labels: ['pricing'],
+              body: [
+                '## Pricing check found differences',
+                '',
+                'The weekly pricing check detected changes between the live docs and `lib/token_lens/pricing.rb`.',
+                '',
+                '```',
+                report.trim(),
+                '```',
+                '',
+                '**To fix:** update `lib/token_lens/pricing.rb` with the new prices.',
+                '',
+                '**Source:** https://platform.claude.com/docs/en/about-claude/pricing',
+                '',
+                '---',
+                '_Opened automatically by the [check-pricing workflow](../../actions/workflows/check-pricing.yml)._'
+              ].join('\n')
+            });

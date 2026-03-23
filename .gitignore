@@ -2,11 +2,12 @@
 .bundle/
 vendor/
 
-# Captures
+# Captures and rendered output
 *.json
 *.jsonl
 !spec/fixtures/**/*.json
 flame.svg
+flame.html
 
 # Ruby
 *.gem

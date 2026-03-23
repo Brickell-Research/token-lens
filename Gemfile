@@ -2,7 +2,8 @@
 
 source "https://rubygems.org"
 
-gem "thor"
+gemspec
+
 gem "webrick"
 
 group :development do
