@@ -1,14 +1,18 @@
 # frozen_string_literal: true
 
 require "json"
+require "fileutils"
 require "token_lens/sources/jsonl"
 
 module TokenLens
   module Commands
     class Record
-      def initialize(duration_in_seconds:, project_dir: nil)
+      SESSIONS_DIR = Pathname.new(Dir.home).join(".token-lens", "sessions")
+
+      def initialize(duration_in_seconds:, project_dir: nil, output: nil)
         @duration_in_seconds = duration_in_seconds
         @project_dir = project_dir
+        @output = output
       end
 
       def run
@@ -34,8 +38,17 @@ module TokenLens
         drain_thread.kill
         events << queue.pop until queue.empty?
         warn "\nCaptured #{events.size} events"
-        $stdout.puts JSON.generate(events)
+        path = save_path
+        FileUtils.mkdir_p(path.dirname)
+        path.write(JSON.generate(events))
+        warn "Saved to #{path}"
         exit 0
+      end
+
+      def save_path
+        return Pathname.new(@output) if @output
+        timestamp = Time.now.strftime("%Y-%m-%d_%H-%M-%S")
+        SESSIONS_DIR.join("#{timestamp}.json")
       end
     end
   end
