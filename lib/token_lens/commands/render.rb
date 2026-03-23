@@ -1,5 +1,10 @@
 # frozen_string_literal: true
 
+require "token_lens/parser"
+require "token_lens/renderer/annotator"
+require "token_lens/renderer/layout"
+require "token_lens/renderer/svg"
+
 module TokenLens
   module Commands
     class Render
@@ -9,9 +14,12 @@ module TokenLens
       end
 
       def run
-        warn "Rendering #{@file_path} → #{@output}..."
-        # TODO: parse → build tree → emit SVG
-        warn "Render not yet implemented"
+        tree = Parser.new(file_path: @file_path).parse
+        Renderer::Annotator.new.annotate(tree)
+        Renderer::Layout.new.layout(tree)
+        svg = Renderer::Svg.new.render(tree)
+        File.write(@output, svg)
+        warn "Wrote #{@output}"
       end
     end
   end
