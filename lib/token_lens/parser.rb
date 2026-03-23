@@ -9,7 +9,23 @@ module TokenLens
     end
 
     def parse
-      split_by_type(JSON.parse(read_file))
+      tokens = split_by_type(JSON.parse(read_file))
+      {
+        jsonl: jsonl_tokens_tree(tokens[:jsonl]),
+        otlp: tokens[:otlp]
+      }
+    end
+
+    def jsonl_tokens_tree(jsonl_tokens)
+      index = jsonl_tokens.each_with_object({}) { |t, h| h[t.uuid] = {token: t, children: []} }
+
+      roots = []
+      index.each_value do |node|
+        parent = node[:token].parent_uuid && index[node[:token].parent_uuid]
+        parent ? parent[:children] << node : roots << node
+      end
+
+      roots
     end
 
     def split_by_type(jsonified_contents)
