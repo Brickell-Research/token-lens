@@ -1,0 +1,15 @@
+# Bundler
+.bundle/
+vendor/
+
+# Captures
+*.json
+*.jsonl
+
+# Ruby
+*.gem
+*.rbc
+.ruby-version.lock
+
+# OS
+.DS_Store
