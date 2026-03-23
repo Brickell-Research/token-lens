@@ -5,6 +5,7 @@ vendor/
 # Captures
 *.json
 *.jsonl
+!spec/fixtures/**/*.json
 
 # Ruby
 *.gem

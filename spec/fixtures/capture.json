@@ -1,0 +1,53 @@
+[
+  {
+    "source": "jsonl",
+    "event": {
+      "uuid": "msg-001",
+      "parentUuid": null,
+      "type": "user",
+      "message": {
+        "role": "user",
+        "content": [{"type": "text", "text": "Hello"}],
+        "usage": {}
+      }
+    }
+  },
+  {
+    "source": "jsonl",
+    "event": {
+      "uuid": "msg-002",
+      "parentUuid": "msg-001",
+      "type": "assistant",
+      "message": {
+        "role": "assistant",
+        "content": [
+          {"type": "text", "text": "Hi there!"},
+          {"type": "tool_use", "id": "tool-001", "name": "Bash", "input": {"command": "ls"}}
+        ],
+        "usage": {
+          "input_tokens": 500,
+          "output_tokens": 120,
+          "cache_read_input_tokens": 300,
+          "cache_creation_input_tokens": 0
+        }
+      }
+    }
+  },
+  {
+    "source": "otlp",
+    "event": {
+      "timeUnixNano": "1711234567890000000",
+      "severityText": "INFO",
+      "body": {"stringValue": "API request completed"},
+      "traceId": "trace-abc",
+      "spanId": "span-xyz",
+      "attributes": [
+        {"key": "gen_ai.usage.input_tokens",              "value": {"intValue": "500"}},
+        {"key": "gen_ai.usage.output_tokens",             "value": {"intValue": "120"}},
+        {"key": "gen_ai.usage.cache_read_input_tokens",   "value": {"intValue": "300"}},
+        {"key": "gen_ai.usage.cache_creation_input_tokens","value": {"intValue": "0"}},
+        {"key": "gen_ai.request.model",                   "value": {"stringValue": "claude-opus-4-6"}}
+      ]
+    }
+  }
+]
