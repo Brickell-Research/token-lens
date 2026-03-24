@@ -21,8 +21,8 @@ module TokenLens
         tree = Parser.new(file_path: path).parse
         tree = Renderer::Reshaper.new.reshape(tree)
         Renderer::Annotator.new.annotate(tree)
-        Renderer::Layout.new.layout(tree)
-        html = Renderer::Html.new.render(tree)
+        canvas_width = Renderer::Layout.new.layout(tree)
+        html = Renderer::Html.new(canvas_width: canvas_width).render(tree)
         File.write(@output, html)
         warn "Wrote #{@output}"
       end
@@ -35,7 +35,7 @@ module TokenLens
         saved = sessions.glob("*.json").max_by(&:mtime)
         return saved if saved
         warn "No saved captures found — reading active Claude Code session directly"
-        Session.latest_jsonl
+        Session.active_or_latest_jsonl
       end
     end
   end

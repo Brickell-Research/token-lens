@@ -6,9 +6,13 @@ module TokenLens
   module Renderer
     class Html
       ROW_HEIGHT = 32
-      COORD_WIDTH = 1200  # logical coordinate space (matches Layout)
+      COORD_WIDTH = 1200  # default logical coordinate space
       FONT_SIZE = 13
-      MIN_LABEL_PCT = 3.0  # hide label if bar is narrower than 3% of canvas
+      MIN_LABEL_PX = 60  # hide label if bar is narrower than 60px
+
+      def initialize(canvas_width: COORD_WIDTH)
+        @canvas_width = canvas_width
+      end
 
       LEGEND_ITEMS = [
         ["bar-c-human", "User prompt"],
@@ -64,15 +68,18 @@ module TokenLens
               <button class="summary-btn" id="summary-btn" onclick="toggleSummary()">&#x2261; Summary</button>
               <button class="cost-btn" id="cost-btn" onclick="toggleCostView()">$ Cost view</button>
               <button class="reset-btn" id="reset-btn" onclick="unzoom()">&#x21A9; Reset zoom</button>
+              <button class="export-btn" onclick="exportSVG()">&#x2913; Export</button>
             </div>
           </div>
-          <div class="spacer"></div>
-          <div class="flame" style="height:#{flame_height}px">
-          <div class="bar total-bar" style="left:0%;width:100%;top:#{total_top}px" data-ox="0" data-ow="#{COORD_WIDTH}" data-cx="0" data-cw="#{COORD_WIDTH}" onmouseover="tip('#{total_tip}')" onmouseout="tip('')" onclick="unzoom()"><span class="lbl total-lbl" id="total-lbl" data-token-text="#{token_total_lbl}" data-cost-text="#{cost_total_lbl}">#{token_total_lbl}</span></div>
+          <div class="flame-wrap" id="flame-wrap">
+          <div class="flame" style="width:#{@canvas_width}px;height:#{flame_height}px">
+          <div class="bar total-bar" style="left:0%;width:100%;top:#{total_top}px" data-ox="0" data-ow="#{@canvas_width}" data-cx="0" data-cw="#{@canvas_width}" onmouseover="tip('#{total_tip}')" onmouseout="tip('')" onclick="unzoom()"><span class="lbl total-lbl" id="total-lbl" data-token-text="#{token_total_lbl}" data-cost-text="#{cost_total_lbl}">#{token_total_lbl}</span></div>
           #{all.map { |n| bar_html(n) }.join("\n")}
           </div>
+          </div>
+          <div class="scroll-strip" id="scroll-strip"><span class="scroll-strip-label">Overview</span>#{scroll_strip_html(all)}<div id="scroll-vp"></div><span class="scroll-strip-counter" id="scroll-counter"></span></div>
           <div id="ftip" class="floattip"></div>
-          <div class="tip" id="tip">&nbsp;</div>
+          <div id="tip" class="tip"><span class="tip-label">Hover for details &middot; Click to zoom</span></div>
           #{session_summary_html(all_flat)}
           <script>
           #{js}
@@ -89,7 +96,7 @@ module TokenLens
       end
 
       def pct(val)
-        (val.to_f / COORD_WIDTH * 100).round(4)
+        (val.to_f / @canvas_width * 100).round(4)
       end
 
       def bar_html(node)
@@ -99,7 +106,7 @@ module TokenLens
         tip = escape_html(tooltip(node))
         left = pct(node[:x])
         width = pct(node[:w])
-        lbl_hidden = (width < MIN_LABEL_PCT) ? " style=\"display:none\"" : ""
+        lbl_hidden = (node[:w] < MIN_LABEL_PX) ? " style=\"display:none\"" : ""
         extra_class = " #{color_class(node)}"
         extra_class += " bar-reread" if reread_bar?(node)
         extra_class += " bar-compaction" if t.is_compaction
@@ -115,7 +122,7 @@ module TokenLens
         end
         badge = reread_bar?(node) ? "<span class=\"warn-badge\">\u26a0</span>" : ""
         <<~HTML.chomp
-          <div class="bar#{extra_class}" style="left:#{left}%;width:#{width}%;top:#{node[:y]}px" data-ox="#{node[:x]}" data-ow="#{node[:w]}" data-cx="#{node[:cost_x]}" data-cw="#{node[:cost_w]}" data-token-lbl="#{lbl}" data-cost-lbl="#{clbl}" data-ftip="#{ftip}" onmouseover="#{mouseover}" onmouseout="tip('')" onclick="zoom(this)"><span class="lbl"#{lbl_hidden}>#{lbl}</span>#{badge}</div>
+          <div class="bar#{extra_class}" style="left:#{left}%;width:calc(#{width}% + 1px);top:#{node[:y]}px" data-ox="#{node[:x]}" data-ow="#{node[:w]}" data-cx="#{node[:cost_x]}" data-cw="#{node[:cost_w]}" data-token-lbl="#{lbl}" data-cost-lbl="#{clbl}" data-ftip="#{ftip}" onmouseover="#{mouseover}" onmouseout="tip('')" onclick="zoom(this)"><span class="lbl"#{lbl_hidden}>#{lbl}</span>#{badge}</div>
         HTML
       end
 
@@ -184,11 +191,19 @@ module TokenLens
         total_input = raw_input + cached + cache_new
         hit_rate = (total_input > 0 && cached > 0) ? (cached.to_f / total_input * 100).round(0).to_i : nil
         parts = []
+        timestamps = all.map { |n| n[:token].timestamp }.compact.sort
+        duration = begin
+          secs = (Time.parse(timestamps.last) - Time.parse(timestamps.first)).to_i
+          fmt_duration(secs) if timestamps.length >= 2 && secs > 0
+        rescue
+          nil
+        end
         parts << "#{@thread_count} threads" if @thread_count&.> 1
         parts << "#{prompts} #{"prompt".then { |w| (prompts == 1) ? w : "#{w}s" }}"
         parts << "#{tasks} #{"task callback".then { |w| (tasks == 1) ? w : "#{w}s" }}" if tasks > 0
         parts << "#{turns} main #{"turn".then { |w| (turns == 1) ? w : "#{w}s" }}"
         parts << "#{sub} subagent #{"turn".then { |w| (sub == 1) ? w : "#{w}s" }}" if sub > 0
+        parts << duration if duration
         parts << "fresh input: #{fmt(marginal)}" if marginal > 0
         parts << "cached input: #{fmt(cached)}" if cached > 0
         parts << "written to cache: #{fmt(cache_new)}" if cache_new > 0
@@ -212,6 +227,24 @@ module TokenLens
         parts << "output: #{fmt(output)}" if output > 0
         parts << "cost: #{fmt_cost(total_cost)}" if total_cost > 0
         parts.join(" | ")
+      end
+
+      def thread_separators(all)
+        roots = all.select { |n| n[:depth] == 0 }
+        return "" if roots.size <= 1
+        # Emit a vertical line at the right edge of each thread (except the last)
+        roots[0..-2].map { |n|
+          right_x = n[:x] + n[:w]
+          pct_val = pct(right_x)
+          %(<div class="thread-sep" style="left:#{pct_val}%"></div>)
+        }.join("\n")
+      end
+
+      def scroll_strip_html(all)
+        # offset by label width so bars don't overlap the "Overview" label
+        all.select { |n| n[:depth] == 0 }.map { |n|
+          %(<div class="sbar #{color_class(n)}" style="left:#{pct(n[:x])}%;width:#{pct(n[:w])}%"></div>)
+        }.join
       end
 
       def legend_html
@@ -466,7 +499,7 @@ module TokenLens
           }
           * { box-sizing: border-box; margin: 0; padding: 0; }
           html, body { height: 100%; }
-          body { background: var(--bg); font-family: 'JetBrains Mono', 'Cascadia Mono', 'Fira Code', ui-monospace, monospace; font-size: #{FONT_SIZE}px; display: flex; flex-direction: column; min-height: 100vh; color: var(--text); }
+          body { background: var(--bg); font-family: 'JetBrains Mono', 'Cascadia Mono', 'Fira Code', ui-monospace, monospace; font-size: #{FONT_SIZE}px; display: flex; flex-direction: column; height: 100%; color: var(--text); }
           .header { display: flex; align-items: center; justify-content: space-between; padding: 4px 8px; border-bottom: 1px solid var(--border); }
           .summary { color: var(--text-dim); font-size: 11px; line-height: 20px; }
           .header-btns { display: flex; gap: 6px; align-items: center; }
@@ -477,17 +510,22 @@ module TokenLens
           .reset-btn:hover { background: var(--surface); color: var(--text); border-color: var(--accent); }
           .theme-btn { background: none; border: 1px solid var(--border); color: var(--text-dim); border-radius: 3px; padding: 2px 8px; font-size: 10px; cursor: pointer; font-family: inherit; }
           .theme-btn:hover { background: var(--surface); color: var(--text); border-color: var(--accent2); }
-          .spacer { flex: 1; }
-          .flame { position: relative; width: 100%; }
+          .flame-wrap { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; overflow-x: auto; overflow-y: hidden; width: 100%; }
+          .flame { position: relative; overflow: hidden; flex-shrink: 0; }
+          .scroll-strip { position: relative; height: 28px; flex-shrink: 0; background: var(--surface); border-top: 1px solid var(--border); cursor: crosshair; overflow: hidden; }
+          .scroll-strip-label { position: absolute; left: 6px; top: 50%; transform: translateY(-50%); font-size: 9px; color: var(--text-dim); letter-spacing: 0.05em; text-transform: uppercase; pointer-events: none; z-index: 3; }
+          .scroll-strip-counter { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 9px; color: var(--text-dim); pointer-events: none; z-index: 3; }
+          .sbar { position: absolute; top: 4px; height: calc(100% - 8px); opacity: 0.75; border-radius: 1px; }
+          #scroll-vp { position: absolute; top: 0; height: 100%; background: rgba(255,255,255,0.06); border: 1.5px solid rgba(255,255,255,0.4); pointer-events: none; box-sizing: border-box; }
           .bar {
             position: absolute;
-            height: #{ROW_HEIGHT - 2}px;
-            border-radius: 1px;
-            border-right: 1px solid var(--bar-border);
-            border-bottom: 2px solid var(--bar-border);
+            height: #{ROW_HEIGHT}px;
+            border-radius: 0;
+            box-shadow: inset 0 -1px 0 rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08), inset -1px 0 0 rgba(0,0,0,0.25);
             cursor: pointer;
             overflow: hidden;
             user-select: none;
+            transition: left 0.2s ease, width 0.2s ease;
           }
           .bar:hover { filter: brightness(1.15) saturate(1.1); }
           .bar-reread { box-shadow: inset 0 -2px 0 var(--accent); }
@@ -500,10 +538,11 @@ module TokenLens
           .bar-c-tool { background: var(--bar-tool); }
           .bar-c-sidechain { background: var(--bar-sidechain); }
           .bar-c-user { background: var(--bar-user); }
+          .bar-c-sidechain .lbl, .bar-c-tool .lbl { color: rgba(255,255,255,0.9); }
           .lbl {
             display: block;
             padding: 0 5px;
-            line-height: #{ROW_HEIGHT - 4}px;
+            line-height: #{ROW_HEIGHT}px;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
@@ -529,6 +568,8 @@ module TokenLens
           .summary-btn { background: none; border: 1px solid var(--border); color: var(--text-dim); border-radius: 3px; padding: 2px 8px; font-size: 10px; cursor: pointer; font-family: inherit; }
           .summary-btn:hover { background: var(--surface); color: var(--text); border-color: var(--accent); }
           .summary-btn.active { border-color: var(--accent); color: var(--accent); }
+          .export-btn { background: none; border: 1px solid var(--border); color: var(--text-dim); border-radius: 3px; padding: 2px 8px; font-size: 10px; cursor: pointer; font-family: inherit; }
+          .export-btn:hover { background: var(--surface); color: var(--accent2); border-color: var(--accent2); }
           .summary-panel { position: fixed; right: 0; top: 0; height: 100%; width: 260px; background: var(--surface); border-left: 1px solid var(--border); z-index: 500; overflow-y: auto; padding: 16px; box-shadow: -8px 0 24px var(--shadow); }
           .summary-panel-title { color: var(--accent); font-size: 12px; font-weight: 600; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; letter-spacing: 0.04em; }
           .summary-close { background: none; border: none; color: var(--text-dim); font-size: 16px; cursor: pointer; padding: 0 2px; line-height: 1; font-family: inherit; }
@@ -541,11 +582,11 @@ module TokenLens
       end
 
       def js
-        w = COORD_WIDTH
-        min_pct = MIN_LABEL_PCT
+        w = @canvas_width
+        min_lbl_px = MIN_LABEL_PX
         <<~JS
           (function() {
-            var W = #{w}, MIN_PCT = #{min_pct};
+            var W = #{w}, MIN_LBL_PX = #{min_lbl_px};
             var costMode = false;
             function bars() { return Array.from(document.querySelectorAll('.bar:not(.total-bar)')); }
             function applyBar(el, nx, nw) {
@@ -554,12 +595,19 @@ module TokenLens
               } else {
                 el.style.display = '';
                 el.style.left = (nx / W * 100) + '%';
-                el.style.width = Math.max(nw, 1) / W * 100 + '%';
+                el.style.width = 'calc(' + (Math.max(nw, 1) / W * 100) + '% + 1px)';
                 var lbl = el.querySelector('.lbl');
-                if (lbl) lbl.style.display = (nw / W * 100 < MIN_PCT) ? 'none' : '';
+                if (lbl) lbl.style.display = (nw < MIN_LBL_PX) ? 'none' : '';
               }
             }
             function resetBtn() { return document.getElementById('reset-btn'); }
+            function withoutTransition(fn) {
+              document.querySelectorAll('.bar').forEach(function(b) { b.style.transition = 'none'; });
+              fn();
+              var first = document.querySelector('.bar');
+              if (first) first.offsetHeight;
+              document.querySelectorAll('.bar').forEach(function(b) { b.style.transition = ''; });
+            }
             window.toggleTheme = function() {
               var root = document.documentElement;
               var isLight = root.getAttribute('data-theme') === 'light';
@@ -577,17 +625,19 @@ module TokenLens
             };
             window.toggleCostView = function() {
               costMode = !costMode;
-              bars().forEach(function(b) {
-                b.removeAttribute('ox');
-                b.removeAttribute('ow');
-                var nx = costMode ? +b.getAttribute('data-cx') : +b.getAttribute('data-ox');
-                var nw = costMode ? +b.getAttribute('data-cw') : +b.getAttribute('data-ow');
-                applyBar(b, nx, nw);
-                var lbl = b.querySelector('.lbl');
-                if (lbl) {
-                  var text = b.getAttribute(costMode ? 'data-cost-lbl' : 'data-token-lbl');
-                  if (text !== null) lbl.textContent = text;
-                }
+              withoutTransition(function() {
+                bars().forEach(function(b) {
+                  b.removeAttribute('ox');
+                  b.removeAttribute('ow');
+                  var nx = costMode ? +b.getAttribute('data-cx') : +b.getAttribute('data-ox');
+                  var nw = costMode ? +b.getAttribute('data-cw') : +b.getAttribute('data-ow');
+                  applyBar(b, nx, nw);
+                  var lbl = b.querySelector('.lbl');
+                  if (lbl) {
+                    var text = b.getAttribute(costMode ? 'data-cost-lbl' : 'data-token-lbl');
+                    if (text !== null) lbl.textContent = text;
+                  }
+                });
               });
               var tl = document.getElementById('total-lbl');
               if (tl) tl.innerHTML = tl.getAttribute(costMode ? 'data-cost-text' : 'data-token-text');
@@ -599,6 +649,11 @@ module TokenLens
               var fx = costMode ? +el.getAttribute('data-cx') : +el.getAttribute('data-ox');
               var fw = costMode ? +el.getAttribute('data-cw') : +el.getAttribute('data-ow');
               if (fw >= W - 1) { unzoom(); return; }
+              var wrap = document.getElementById('flame-wrap');
+              var flame = document.querySelector('.flame');
+              if (!flame.getAttribute('data-orig-w')) flame.setAttribute('data-orig-w', flame.style.width);
+              flame.style.width = wrap.clientWidth + 'px';
+              wrap.scrollLeft = 0;
               bars().forEach(function(b) {
                 if (!b.getAttribute('ox')) {
                   b.setAttribute('ox', costMode ? +b.getAttribute('data-cx') : +b.getAttribute('data-ox'));
@@ -609,6 +664,9 @@ module TokenLens
               var btn = resetBtn(); if (btn) btn.style.display = 'inline-block';
             };
             window.unzoom = function() {
+              var flame = document.querySelector('.flame');
+              var origW = flame.getAttribute('data-orig-w');
+              if (origW) { flame.style.width = origW; flame.removeAttribute('data-orig-w'); }
               bars().forEach(function(b) {
                 var ox = b.getAttribute('ox');
                 if (ox) {
@@ -619,11 +677,54 @@ module TokenLens
               });
               var btn = resetBtn(); if (btn) btn.style.display = 'none';
             };
+            function escSVG(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+            window.exportSVG = function() {
+              var SVG_W = 1600, HDR = 28, MIN_H = 400;
+              var flame = document.querySelector('.flame');
+              var flameH = parseFloat(flame.style.height) || flame.offsetHeight;
+              var svgH = Math.max(MIN_H, Math.round(flameH) + HDR);
+              var yOffset = svgH - Math.round(flameH) - HDR; // push bars to bottom
+              var allBars = Array.from(document.querySelectorAll('.flame .bar')).filter(function(b) { return b.style.display !== 'none'; });
+              if (!allBars.length) return;
+              var st = getComputedStyle(document.documentElement);
+              var bg = st.getPropertyValue('--bg').trim() || '#000';
+              var surface = st.getPropertyValue('--surface').trim() || '#0a0a14';
+              var border = st.getPropertyValue('--border').trim() || '#1a1a2e';
+              var textDim = st.getPropertyValue('--text-dim').trim() || '#8892a0';
+              var barText = st.getPropertyValue('--bar-text').trim() || '#000';
+              var summaryEl = document.querySelector('.summary');
+              var summaryStr = summaryEl ? summaryEl.textContent.trim() : '';
+              var defs = [], rects = [], texts = [];
+              rects.push('<rect x="0" y="0" width="' + SVG_W + '" height="' + HDR + '" fill="' + surface + '"/>');
+              rects.push('<line x1="0" y1="' + HDR + '" x2="' + SVG_W + '" y2="' + HDR + '" stroke="' + border + '" stroke-width="1"/>');
+              texts.push('<text x="8" y="18" font-family="monospace" font-size="11" fill="' + textDim + '">' + escSVG(summaryStr) + '</text>');
+              allBars.forEach(function(bar, i) {
+                var x = Math.round(parseFloat(bar.style.left) / 100 * SVG_W);
+                var w = Math.max(1, Math.round(parseFloat(bar.style.width) / 100 * SVG_W));
+                var y = Math.round(parseFloat(bar.style.top)) + HDR + yOffset;
+                var h = Math.round(parseFloat(getComputedStyle(bar).height));
+                if (isNaN(x) || isNaN(y) || isNaN(w) || h <= 0) return;
+                var fill = getComputedStyle(bar).backgroundColor;
+                var cid = 'c' + i;
+                defs.push('<clipPath id="' + cid + '"><rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '"/></clipPath>');
+                rects.push('<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" fill="' + fill + '"/>');
+                var lbl = bar.querySelector('.lbl');
+                if (lbl && lbl.style.display !== 'none' && w > 28 && lbl.textContent.trim()) {
+                  var isTotal = bar.classList.contains('total-bar');
+                  texts.push('<text x="' + (x+3) + '" y="' + (y + h/2 + 4) + '" font-family="monospace" font-size="11" fill="' + (isTotal ? textDim : barText) + '" font-weight="' + (isTotal ? '600' : '400') + '" clip-path="url(#' + cid + ')">' + escSVG(lbl.textContent) + '</text>');
+                }
+              });
+              var svg = '<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" width="' + SVG_W + '" height="' + svgH + '"><rect width="100%" height="100%" fill="' + bg + '"/><defs>' + defs.join('') + '</defs>' + rects.join('') + texts.join('') + '</svg>';
+              var a = document.createElement('a');
+              a.href = URL.createObjectURL(new Blob([svg], {type: 'image/svg+xml'}));
+              a.download = 'token-lens.svg';
+              document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            };
             function esc(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
             window.tip = function(s, prompt) {
               var el = document.getElementById('tip');
               if (!el) return;
-              if (!s && !prompt) { el.innerHTML = '&nbsp;'; return; }
+              if (!s && !prompt) { el.innerHTML = '<span class="tip-label">Hover for details \u00b7 Click to zoom</span>'; return; }
               var sep = '<span class="tip-sep">\u00b7</span>';
               var parts = s ? s.split(' | ').filter(Boolean) : [];
               var html = parts.map(function(p, i) {
@@ -659,6 +760,64 @@ module TokenLens
               var bar = e.target.closest && e.target.closest('.bar:not(.total-bar)');
               if (bar) { var ft = document.getElementById('ftip'); if (ft) ft.style.display = 'none'; }
             });
+            // Disable transitions on initial load
+            document.querySelectorAll('.bar').forEach(function(b) { b.style.transition = 'none'; });
+            requestAnimationFrame(function() { requestAnimationFrame(function() {
+              document.querySelectorAll('.bar').forEach(function(b) { b.style.transition = ''; });
+            }); });
+            // Scroll strip sync
+            (function() {
+              var wrap = document.getElementById('flame-wrap');
+              var vp = document.getElementById('scroll-vp');
+              var strip = document.getElementById('scroll-strip');
+              var counter = document.getElementById('scroll-counter');
+              var threadCount = #{@thread_count || 0};
+              if (!wrap || !vp || !strip) return;
+              function updateStrip() {
+                var flameW = wrap.scrollWidth;
+                var viewW = wrap.clientWidth;
+                var pct = wrap.scrollLeft / flameW;
+                var vpPct = Math.min(1, viewW / flameW);
+                vp.style.left = (pct * 100) + '%';
+                vp.style.width = (vpPct * 100) + '%';
+                if (counter && threadCount > 1) {
+                  var firstThread = Math.floor(pct * threadCount) + 1;
+                  var visibleThreads = Math.ceil(vpPct * threadCount);
+                  var lastThread = Math.min(threadCount, firstThread + visibleThreads - 1);
+                  counter.textContent = firstThread + '\u2013' + lastThread + ' / ' + threadCount;
+                }
+              }
+              wrap.addEventListener('scroll', updateStrip);
+              window.addEventListener('resize', updateStrip);
+              updateStrip();
+              strip.addEventListener('click', function(e) {
+                if (e.target === vp) return;
+                var rect = strip.getBoundingClientRect();
+                var pct = (e.clientX - rect.left) / rect.width;
+                wrap.scrollLeft = pct * wrap.scrollWidth - wrap.clientWidth / 2;
+              });
+              // Drag the viewport indicator
+              var dragging = false, dragStartX = 0, dragStartScroll = 0;
+              vp.style.pointerEvents = 'auto';
+              vp.style.cursor = 'grab';
+              vp.addEventListener('mousedown', function(e) {
+                dragging = true;
+                dragStartX = e.clientX;
+                dragStartScroll = wrap.scrollLeft;
+                vp.style.cursor = 'grabbing';
+                e.preventDefault();
+              });
+              document.addEventListener('mousemove', function(e) {
+                if (!dragging) return;
+                var rect = strip.getBoundingClientRect();
+                var dx = e.clientX - dragStartX;
+                var scale = wrap.scrollWidth / rect.width;
+                wrap.scrollLeft = dragStartScroll + dx * scale;
+              });
+              document.addEventListener('mouseup', function() {
+                if (dragging) { dragging = false; vp.style.cursor = 'grab'; }
+              });
+            })();
           })();
         JS
       end
