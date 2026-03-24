@@ -12,10 +12,18 @@
       el.style.display = "none";
     } else {
       el.style.display = "";
-      el.style.left = (nx / W) * 100 + "%";
-      el.style.width = "calc(" + (Math.max(nw, 1) / W) * 100 + "% + 1px)";
+      el.style.left = `${(nx / W) * 100}%`;
+      el.style.width = `calc(${(Math.max(nw, 1) / W) * 100}% + 1px)`;
       const lbl = el.querySelector(".lbl");
-      if (lbl) lbl.style.display = nw < MIN_LBL_PX ? "none" : "";
+      if (lbl) {
+        if (nw < MIN_LBL_PX) {
+          lbl.style.display = "none";
+        } else {
+          lbl.style.display = "";
+          // Pin label to visible left edge when bar extends off-screen to the left
+          lbl.style.paddingLeft = nx < 0 ? `calc(${(-nx / nw) * 100}% + 5px)` : "";
+        }
+      }
     }
   }
   function resetBtn() {
@@ -74,8 +82,7 @@
       c.style.backgroundColor = c.getAttribute(costMode ? "data-color-cost" : "data-color-token");
     });
     var sb = document.getElementById("hm-sort-btn");
-    if (sb && hmSorted)
-      sb.innerHTML = costMode ? "&#x21C5; Sort by cost" : "&#x21C5; Sort by tokens";
+    if (sb) sb.innerHTML = costMode ? "&#x21C5; Sort by cost" : "&#x21C5; Sort by tokens";
     var ramp = document.getElementById("hm-legend-ramp");
     if (ramp)
       ramp.style.background = costMode
@@ -91,7 +98,7 @@
       sortHeatmap();
     }
     if (wasZoomed) {
-      if (wasZoomed.classList && wasZoomed.classList.contains("hm-cell")) {
+      if (wasZoomed.classList?.contains("hm-cell")) {
         openPrompt(+wasZoomed.getAttribute("data-idx"));
       } else {
         zoom(wasZoomed);
@@ -107,7 +114,7 @@
     var wrap = document.getElementById("flame-wrap");
     var flame = document.querySelector(".flame");
     if (!flame.getAttribute("data-orig-w")) flame.setAttribute("data-orig-w", flame.style.width);
-    flame.style.width = wrap.clientWidth + "px";
+    flame.style.width = `${wrap.clientWidth}px`;
     wrap.scrollLeft = 0;
     bars().forEach((b) => {
       if (!b.getAttribute("ox")) {
@@ -140,14 +147,14 @@
     zoomedEl = null;
     // If we're still viewing a specific prompt, re-zoom to its root
     if (hmActiveIdx >= 0) {
-      var cell = document.querySelector('.hm-cell[data-idx="' + hmActiveIdx + '"]');
-      if (cell) zoomToRoot(cell);
+      const hmCell = document.querySelector(`.hm-cell[data-idx="${hmActiveIdx}"]`);
+      if (hmCell) zoomToRoot(hmCell);
     }
   };
   // resetZoom: if sub-zoomed inside a prompt → unzoom back to prompt view;
   // if viewing a prompt (or full overview) → close back to heatmap
   window.resetZoom = () => {
-    if (zoomedEl && zoomedEl.classList && !zoomedEl.classList.contains("hm-cell")) {
+    if (zoomedEl?.classList && !zoomedEl.classList.contains("hm-cell")) {
       unzoom();
     } else {
       closePrompt();
@@ -168,16 +175,15 @@
     var html = parts
       .map((p, i) => {
         var e = esc(p);
-        if (p.charAt(0) === "\u26a0") return '<span class="tip-warn">' + e + "</span>";
-        if (i === 0 && p.indexOf("tokens") !== -1)
-          return '<span class="tip-tokens">' + e + "</span>";
+        if (p.charAt(0) === "\u26a0") return `<span class="tip-warn">${e}</span>`;
+        if (i === 0 && p.indexOf("tokens") !== -1) return `<span class="tip-tokens">${e}</span>`;
         if (p.indexOf("claude-") !== -1 || /^(haiku|sonnet|opus)/.test(p))
-          return '<span class="tip-model">' + e + "</span>";
-        if (/^[^:]*:\s/.test(p)) return '<span class="tip-label">' + e + "</span>";
-        return '<span class="tip-code">' + e + "</span>";
+          return `<span class="tip-model">${e}</span>`;
+        if (/^[^:]*:\s/.test(p)) return `<span class="tip-label">${e}</span>`;
+        return `<span class="tip-code">${e}</span>`;
       })
       .join(sep);
-    if (prompt) html += (html ? sep : "") + '<span class="tip-prompt">' + esc(prompt) + "</span>";
+    if (prompt) html += `${html ? sep : ""}<span class="tip-prompt">${esc(prompt)}</span>`;
     el.innerHTML = html;
   };
   var mx = 0,
@@ -187,12 +193,12 @@
     my = e.clientY;
     var ft = document.getElementById("ftip");
     if (ft && ft.style.display !== "none") {
-      ft.style.left = mx + 14 + "px";
-      ft.style.top = my - 38 + "px";
+      ft.style.left = `${mx + 14}px`;
+      ft.style.top = `${my - 38}px`;
     }
   });
   document.addEventListener("mouseover", (e) => {
-    var bar = e.target.closest && e.target.closest(".bar:not(.total-bar)");
+    var bar = e.target.closest?.(".bar:not(.total-bar)");
     var ft = document.getElementById("ftip");
     if (!ft) return;
     if (bar) {
@@ -200,13 +206,13 @@
       if (d) {
         ft.textContent = d;
         ft.style.display = "block";
-        ft.style.left = mx + 14 + "px";
-        ft.style.top = my - 38 + "px";
+        ft.style.left = `${mx + 14}px`;
+        ft.style.top = `${my - 38}px`;
       }
     }
   });
   document.addEventListener("mouseout", (e) => {
-    var bar = e.target.closest && e.target.closest(".bar:not(.total-bar)");
+    var bar = e.target.closest?.(".bar:not(.total-bar)");
     if (bar) {
       const ft = document.getElementById("ftip");
       if (ft) ft.style.display = "none";
@@ -237,7 +243,7 @@
     var wrap = document.getElementById("flame-wrap");
     var flame = document.querySelector(".flame");
     if (!flame.getAttribute("data-orig-w")) flame.setAttribute("data-orig-w", flame.style.width);
-    flame.style.width = wrap.clientWidth + "px";
+    flame.style.width = `${wrap.clientWidth}px`;
     wrap.scrollLeft = 0;
     bars().forEach((b) => {
       if (!b.getAttribute("ox")) {
@@ -259,7 +265,7 @@
     if (fw) fw.style.display = "";
     var back = document.getElementById("hm-back");
     if (back) back.style.display = "";
-    var cell = document.querySelector('.hm-cell[data-idx="' + idx + '"]');
+    var cell = document.querySelector(`.hm-cell[data-idx="${idx}"]`);
     if (cell) {
       withoutTransition(() => {
         zoomToRoot(cell);
@@ -290,15 +296,16 @@
       cells.sort((a, b) => {
         var av = costMode
           ? parseFloat(a.getAttribute("data-cost"))
-          : parseInt(a.getAttribute("data-tokens"));
+          : parseInt(a.getAttribute("data-tokens"), 10);
         var bv = costMode
           ? parseFloat(b.getAttribute("data-cost"))
-          : parseInt(b.getAttribute("data-tokens"));
+          : parseInt(b.getAttribute("data-tokens"), 10);
         return bv - av;
       });
     } else {
       cells.sort(
-        (a, b) => parseInt(a.getAttribute("data-idx")) - parseInt(b.getAttribute("data-idx")),
+        (a, b) =>
+          parseInt(a.getAttribute("data-idx"), 10) - parseInt(b.getAttribute("data-idx"), 10),
       );
     }
     cells.forEach((c) => {
@@ -318,29 +325,31 @@
   };
   function scaleHeatmap() {
     var hm = document.getElementById("heatmap");
-    if (hm && hm.classList.contains("hm-strip")) return;
+    if (hm?.classList.contains("hm-strip")) return;
     var allCells = hmCells();
     var cells = allCells.filter((c) => !c.classList.contains("hm-dimmed"));
     var n = cells.length || 1;
     var maxCell = Math.min(96, Math.max(36, Math.floor(1400 / Math.sqrt(n))));
     var minCell = 16;
     var vals = cells.map((c) =>
-      costMode ? parseFloat(c.getAttribute("data-cost")) : parseInt(c.getAttribute("data-tokens")),
+      costMode
+        ? parseFloat(c.getAttribute("data-cost"))
+        : parseInt(c.getAttribute("data-tokens"), 10),
     );
     var maxVal = Math.max.apply(null, vals) || 1;
     cells.forEach((c, i) => {
       var t = Math.sqrt(vals[i] / maxVal);
       var sz = Math.round(minCell + (maxCell - minCell) * t);
-      c.style.width = sz + "px";
-      c.style.height = sz + "px";
+      c.style.width = `${sz}px`;
+      c.style.height = `${sz}px`;
       var lbl = c.querySelector(".hm-idx");
       if (lbl) lbl.style.display = sz < 24 ? "none" : "";
     });
     allCells
       .filter((c) => c.classList.contains("hm-dimmed"))
       .forEach((c) => {
-        c.style.width = minCell + "px";
-        c.style.height = minCell + "px";
+        c.style.width = `${minCell}px`;
+        c.style.height = `${minCell}px`;
       });
   }
   document.addEventListener("keydown", (e) => {

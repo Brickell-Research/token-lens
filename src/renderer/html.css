@@ -34,7 +34,9 @@
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
 }
 :root[data-theme="light"] .hm-cell:hover {
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12), 0 0 8px var(--accent-faint);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.12),
+    0 0 8px var(--accent-faint);
 }
 * {
   box-sizing: border-box;
@@ -74,7 +76,7 @@ body {
 .cost-btn {
   background: none;
   border: 1px solid var(--border);
-  color: var(--text-dim);
+  color: var(--text);
   border-radius: 3px;
   padding: 3px 10px;
   font-size: 11px;
@@ -93,7 +95,7 @@ body {
 .reset-btn {
   background: none;
   border: 1px solid var(--border);
-  color: var(--text-dim);
+  color: var(--text);
   border-radius: 3px;
   padding: 3px 10px;
   font-size: 11px;
@@ -109,7 +111,7 @@ body {
 .theme-btn {
   background: none;
   border: 1px solid var(--border);
-  color: var(--text-dim);
+  color: var(--text);
   border-radius: 3px;
   padding: 3px 10px;
   font-size: 11px;
@@ -156,7 +158,7 @@ body {
 }
 .hm-search {
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 1px solid #2e2e50;
   color: var(--text);
   border-radius: 3px;
   padding: 3px 8px;
@@ -171,7 +173,7 @@ body {
 .hm-sort-btn {
   background: none;
   border: 1px solid var(--border);
-  color: var(--text-dim);
+  color: var(--text);
   border-radius: 3px;
   padding: 3px 10px;
   font-size: 11px;
@@ -290,7 +292,6 @@ body {
 .hm-hint {
   color: var(--text-dim);
   font-size: 10px;
-  opacity: 0.6;
   white-space: nowrap;
 }
 .hm-legend {
@@ -301,7 +302,6 @@ body {
 .hm-legend-label {
   color: var(--text-dim);
   font-size: 9px;
-  opacity: 0.7;
   white-space: nowrap;
 }
 .hm-legend-ramp {
@@ -342,13 +342,7 @@ body {
   box-shadow: inset 0 -2px 0 var(--accent);
 }
 .bar-compaction {
-  background: linear-gradient(
-    to right,
-    #7a96a8 0%,
-    #607b8b 12%,
-    #607b8b 88%,
-    #4a6070 100%
-  ) !important;
+  background: linear-gradient(to right, #7a96a8 0%, #607b8b 12%, #607b8b 88%, #4a6070 100%);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.12),
     inset 0 -1px 0 rgba(0, 0, 0, 0.3);
@@ -448,7 +442,7 @@ body {
   cursor: pointer;
 }
 .total-lbl {
-  color: var(--text-dim) !important;
+  color: var(--text-dim);
   font-weight: 600;
   letter-spacing: 0.04em;
   font-size: 11px;
@@ -474,7 +468,7 @@ body {
   flex-shrink: 0;
 }
 .legend-swatch.bar-compaction {
-  background: var(--bar-compaction) !important;
+  background: var(--bar-compaction);
 }
 .floattip {
   position: fixed;
@@ -494,7 +488,7 @@ body {
 .summary-btn {
   background: none;
   border: 1px solid var(--border);
-  color: var(--text-dim);
+  color: var(--text);
   border-radius: 3px;
   padding: 3px 10px;
   font-size: 11px;

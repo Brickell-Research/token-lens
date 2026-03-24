@@ -192,7 +192,7 @@ ${jsText}
     for (const node of all) {
       for (const tu of toolUses(node.token)) {
         if (!["Read", "Write", "Edit"].includes(tu.name ?? "")) continue;
-        const path = String(tu.input?.["file_path"] ?? "");
+        const path = String(tu.input?.file_path ?? "");
         if (path.length > 0) {
           counts.set(path, (counts.get(path) ?? 0) + 1);
         }
@@ -227,7 +227,7 @@ ${jsText}
   private rereadBar(node: Node): boolean {
     return toolUses(node.token).some((tu) => {
       if (!["Read", "Write", "Edit"].includes(tu.name ?? "")) return false;
-      const path = String(tu.input?.["file_path"] ?? "");
+      const path = String(tu.input?.file_path ?? "");
       return this.rereadFiles.has(path);
     });
   }
@@ -243,7 +243,7 @@ ${jsText}
     for (const tu of uses) {
       const results = toolResults(userChild.token);
       const tr = results.find(
-        (r) => (r as unknown as Record<string, unknown>)["tool_use_id"] === tu.id,
+        (r) => (r as unknown as Record<string, unknown>).tool_use_id === tu.id,
       );
       if (!tr) continue;
       const content = Array.isArray(tr.content)
@@ -252,8 +252,8 @@ ${jsText}
           ? [tr.content]
           : [];
       for (const c of content) {
-        if (typeof c === "object" && c !== null && (c as Record<string, unknown>)["text"] != null) {
-          chars += String((c as Record<string, unknown>)["text"]).length;
+        if (typeof c === "object" && c !== null && (c as Record<string, unknown>).text != null) {
+          chars += String((c as Record<string, unknown>).text).length;
         } else {
           chars += String(c).length;
         }
@@ -431,7 +431,7 @@ ${jsText}
       if (t.agentId) parts.push(`agent: ${t.agentId}`);
       for (const tu of toolUses(t)) {
         if (!["Read", "Write", "Edit"].includes(tu.name ?? "")) continue;
-        const path = String(tu.input?.["file_path"] ?? "");
+        const path = String(tu.input?.file_path ?? "");
         const count = this.rereadFiles.get(path);
         if (count !== undefined) {
           parts.push(`\u26a0 ${basename(path)} accessed ${count}x in session`);
@@ -444,7 +444,7 @@ ${jsText}
   private toolInput(tool: ContentBlock, format: "brief" | "detail"): string {
     const input = (tool.input ?? {}) as Record<string, unknown>;
     const getCmd = (): string => {
-      const raw = String(input["command"] ?? "").trim();
+      const raw = String(input.command ?? "").trim();
       return raw.replace(/^source[^\n&]+&&\s*rvm[^\n&]+&&\s*/, "");
     };
     switch (tool.name) {
@@ -454,26 +454,26 @@ ${jsText}
       case "Write":
       case "Edit":
         return format === "brief"
-          ? basename(String(input["file_path"] ?? ""))
-          : String(input["file_path"] ?? "");
+          ? basename(String(input.file_path ?? ""))
+          : String(input.file_path ?? "");
       case "Glob":
         return format === "brief"
-          ? String(input["pattern"] ?? "")
-          : `glob:${String(input["pattern"] ?? "")}`;
+          ? String(input.pattern ?? "")
+          : `glob:${String(input.pattern ?? "")}`;
       case "Grep":
         return format === "brief"
-          ? String(input["pattern"] ?? "")
-          : `grep:${String(input["pattern"] ?? "")}`;
+          ? String(input.pattern ?? "")
+          : `grep:${String(input.pattern ?? "")}`;
       case "Agent":
         return format === "brief"
-          ? String(input["description"] ?? "")
-          : truncate(String(input["prompt"] ?? ""), 100);
+          ? String(input.description ?? "")
+          : truncate(String(input.prompt ?? ""), 100);
       case "WebSearch":
         return format === "brief"
-          ? String(input["query"] ?? "")
-          : `search:${String(input["query"] ?? "")}`;
+          ? String(input.query ?? "")
+          : `search:${String(input.query ?? "")}`;
       case "WebFetch": {
-        const url = String(input["url"] ?? "");
+        const url = String(input.url ?? "");
         return format === "brief" ? url.split("/").slice(-2).join("/") : url;
       }
       default:
@@ -566,8 +566,8 @@ ${jsText}
         const combinedCost = groupCosts[i];
         const hasCompaction = group.length > 1;
 
-        const colorCost = hmColor(combinedCost, minCost, maxCost, [32, 5, 16], [255, 20, 147]);
-        const colorToken = hmColor(combinedTokens, minTok, maxTok, [7, 48, 48], [0, 206, 209]);
+        const colorCost = hmColor(combinedCost, minCost, maxCost, [0, 26, 8], [34, 197, 94]);
+        const colorToken = hmColor(combinedTokens, minTok, maxTok, [26, 8, 0], [255, 124, 42]);
 
         // x/w spans all nodes in the group
         const last = group[group.length - 1];
@@ -602,7 +602,7 @@ ${jsText}
     <button class="hm-sort-btn" id="hm-sort-btn" onclick="sortHeatmap()">&#x21C5; Sort by tokens</button>
     <div class="hm-legend" id="hm-legend">
       <span class="hm-legend-label" id="hm-legend-lo">few tokens</span>
-      <span class="hm-legend-ramp" id="hm-legend-ramp" data-token-grad="linear-gradient(to right, #073030, #00CED1)" data-cost-grad="linear-gradient(to right, #200510, #FF1493)" style="background:linear-gradient(to right, #073030, #00CED1)"></span>
+      <span class="hm-legend-ramp" id="hm-legend-ramp" data-token-grad="linear-gradient(to right, #1a0800, #ff7c2a)" data-cost-grad="linear-gradient(to right, #001a08, #22c55e)" style="background:linear-gradient(to right, #1a0800, #ff7c2a)"></span>
       <span class="hm-legend-label" id="hm-legend-hi">many</span>
     </div>
   </div>
@@ -680,6 +680,10 @@ function truncate(str: string, len: number): string {
 }
 
 function summaryStat(label: string, value: string, warn = false, highlight = false): string {
-  const valClass = warn ? "summary-val summary-warn" : highlight ? "summary-val summary-val-highlight" : "summary-val";
+  const valClass = warn
+    ? "summary-val summary-warn"
+    : highlight
+      ? "summary-val summary-val-highlight"
+      : "summary-val";
   return `<dt class="summary-dt">${escHtml(label)}</dt><dd class="${valClass}">${escHtml(value)}</dd>`;
 }

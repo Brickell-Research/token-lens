@@ -6,7 +6,6 @@ import {
   humanText,
   isAssistant,
   isHumanPrompt,
-  toolResults,
   toolUses,
   totalTokens,
   withToken,
@@ -86,7 +85,7 @@ describe("createToken", () => {
 
   it("extracts toolUses from content", () => {
     const raw = makeRaw();
-    (raw.message!.content as unknown[]).push({
+    (raw.message?.content as unknown[]).push({
       type: "tool_use",
       id: "t1",
       name: "Bash",
@@ -97,7 +96,7 @@ describe("createToken", () => {
 
   it("handles missing usage gracefully", () => {
     const raw = makeRaw();
-    delete raw.message!.usage;
+    delete raw.message?.usage;
     const token = createToken(raw);
     expect(token.inputTokens).toBe(0);
     expect(totalTokens(token)).toBe(0);
