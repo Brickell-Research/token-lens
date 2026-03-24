@@ -1,0 +1,11 @@
+{
+  "extends": "@tsconfig/bun/tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "./src",
+    "strict": true,
+    "noEmit": true,
+    "types": ["bun-types"],
+    "noUncheckedIndexedAccess": false
+  },
+  "include": ["src"]
+}

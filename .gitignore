@@ -30,6 +30,9 @@ coverage/
 # Captures and rendered output
 *.json
 *.jsonl
-!spec/fixtures/**/*.json
+!package.json
+!tsconfig.json
+!biome.json
+!src/fixtures/**/*.json
 flame.svg
 flame.html
