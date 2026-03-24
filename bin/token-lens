@@ -1,7 +1,2 @@
-#!/usr/bin/env ruby
-# frozen_string_literal: true
-
-require "rubygems"
-require "bundler/setup"
-require "token_lens/cli"
-TokenLens::CLI.start(ARGV)
+#!/usr/bin/env bun
+import "../src/index.ts";

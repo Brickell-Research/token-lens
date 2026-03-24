@@ -1,6 +1,31 @@
-# Bundler
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Node / Bun
+node_modules/
+dist/
+# bun.lockb is committed (like Gemfile.lock) — do NOT ignore it
+
+# TypeScript build artifacts
+src/**/*.js.map
+src/**/*.d.ts
+
+# Bundler / Ruby
 .bundle/
 vendor/
+*.gem
+*.rbc
+.ruby-version.lock
+
+# Test artifacts
+coverage/
 
 # Captures and rendered output
 *.json
@@ -8,11 +33,3 @@ vendor/
 !spec/fixtures/**/*.json
 flame.svg
 flame.html
-
-# Ruby
-*.gem
-*.rbc
-.ruby-version.lock
-
-# OS
-.DS_Store

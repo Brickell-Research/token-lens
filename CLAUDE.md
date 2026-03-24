@@ -1,15 +1,18 @@
-# Ruby Setup
+# Setup
 
-Requires Ruby >= 3.2. If using RVM: `source ~/.rvm/scripts/rvm && rvm use $(cat .ruby-version 2>/dev/null || echo "default")`
+Requires [Bun](https://bun.sh). Install deps: `bun install`
 
 # Commands
 
-- Install deps: `bundle install`
-- Tests: `bundle exec rspec`
-- Lint: `bundle exec standardrb --fix`
+- Dev run: `bun run dev`
+- Tests: `bun test`
+- Lint: `bun run lint`
+- Type check: `bun run typecheck`
+- Build binary: `bun run build`
 
 # Architecture
 
-- New CLI commands go in `lib/token_lens/commands/` as a class
-- Register them in `lib/token_lens/cli.rb` via Thor `desc` + method
-- Tests mirror lib structure: `lib/token_lens/foo.rb` → `spec/token_lens/foo_spec.rb`
+- New CLI commands go in `src/commands/` as a class
+- Register them in `src/index.ts` via Commander `.command()`
+- Tests mirror src structure: `src/foo.ts` → `src/foo.test.ts`
+- Renderer pipeline: `Parser` → `Reshaper` → sort → `annotate` → `layout` → `Html`
