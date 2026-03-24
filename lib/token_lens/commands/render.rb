@@ -20,6 +20,7 @@ module TokenLens
         warn "Rendering #{path}"
         tree = Parser.new(file_path: path).parse
         tree = Renderer::Reshaper.new.reshape(tree)
+        tree.sort_by! { |n| n[:token].timestamp || "" }
         Renderer::Annotator.new.annotate(tree)
         canvas_width = Renderer::Layout.new.layout(tree)
         html = Renderer::Html.new(canvas_width: canvas_width).render(tree)
