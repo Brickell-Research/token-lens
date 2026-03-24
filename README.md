@@ -32,18 +32,19 @@ If you have multiple sessions, `render` shows an interactive picker. With only o
 Record a bounded window while you work:
 
 ```sh
-token-lens record --duration-in-seconds=300
+token-lens record --duration-in-seconds=300 --output=session.json
 # ... do your Claude Code work ...
-token-lens render
+token-lens render --file-path=session.json
 open flame.html
 ```
 
 ### Options
 
 ```sh
-token-lens record --output=my-session.json         # save to a specific path
-token-lens render --file-path=my-session.json      # render a specific capture
-token-lens render --output=report.html             # write HTML to a custom path
+token-lens record --output=my-session.json              # save to a specific path
+token-lens record --project-dir=/path/to/project        # record a specific project's session
+token-lens render --file-path=my-session.json           # render a specific capture
+token-lens render --output=report.html                  # write HTML to a custom path
 ```
 
 ## License
