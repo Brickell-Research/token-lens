@@ -1,7 +1,7 @@
-import { describe, it, expect } from "bun:test";
-import { annotate } from "./annotator";
+import { describe, expect, it } from "bun:test";
 import { costUsd } from "../token";
 import type { Node, Token } from "../types";
+import { annotate } from "./annotator";
 
 function makeToken(overrides: Partial<Token> = {}): Token {
   return {
@@ -83,9 +83,7 @@ describe("annotate", () => {
       // cost = (100 * 3.0 + 50 * 15.0) / 1_000_000 = 0.00105
       const tree = [node({ inputTokens: 100, outputTokens: 50 })];
       annotate(tree);
-      expect(Math.abs((tree[0].subtreeCost ?? 0) - 0.00105)).toBeLessThan(
-        0.0000001
-      );
+      expect(Math.abs((tree[0].subtreeCost ?? 0) - 0.00105)).toBeLessThan(0.0000001);
     });
 
     it("rolls up subtreeCost through children", () => {
@@ -98,9 +96,9 @@ describe("annotate", () => {
       annotate([parent]);
       const childCost = child.subtreeCost ?? 0;
       const parentOwnCost = costUsd(parent.token);
-      expect(
-        Math.abs((parent.subtreeCost ?? 0) - (parentOwnCost + childCost))
-      ).toBeLessThan(0.0000001);
+      expect(Math.abs((parent.subtreeCost ?? 0) - (parentOwnCost + childCost))).toBeLessThan(
+        0.0000001,
+      );
     });
 
     it("sets subtreeCost to 0 for zero-token user nodes", () => {

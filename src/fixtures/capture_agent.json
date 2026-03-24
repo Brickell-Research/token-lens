@@ -8,7 +8,7 @@
       "timestamp": "2026-03-23T10:00:00.000Z",
       "message": {
         "role": "user",
-        "content": [{"type": "text", "text": "Search the web for me."}],
+        "content": [{ "type": "text", "text": "Search the web for me." }],
         "usage": {}
       }
     }
@@ -25,8 +25,15 @@
         "role": "assistant",
         "model": "claude-opus-4-6",
         "content": [
-          {"type": "tool_use", "id": "agent-tool-001", "name": "Agent",
-           "input": {"description": "Search for Ruby SVG libraries", "prompt": "Find Ruby SVG flame graph libraries"}}
+          {
+            "type": "tool_use",
+            "id": "agent-tool-001",
+            "name": "Agent",
+            "input": {
+              "description": "Search for Ruby SVG libraries",
+              "prompt": "Find Ruby SVG flame graph libraries"
+            }
+          }
         ],
         "usage": {
           "input_tokens": 500,
@@ -53,7 +60,7 @@
           "uuid": "sub-user-001",
           "message": {
             "role": "user",
-            "content": [{"type": "text", "text": "Find Ruby SVG flame graph libraries"}]
+            "content": [{ "type": "text", "text": "Find Ruby SVG flame graph libraries" }]
           }
         }
       }
@@ -77,8 +84,14 @@
           "message": {
             "role": "assistant",
             "model": "claude-haiku-4-5-20251001",
-            "content": [{"type": "tool_use", "id": "sub-tu-001", "name": "WebSearch",
-                         "input": {"query": "Ruby SVG flame graph"}}],
+            "content": [
+              {
+                "type": "tool_use",
+                "id": "sub-tu-001",
+                "name": "WebSearch",
+                "input": { "query": "Ruby SVG flame graph" }
+              }
+            ],
             "usage": {
               "input_tokens": 100,
               "output_tokens": 20,
@@ -108,8 +121,14 @@
           "message": {
             "role": "assistant",
             "model": "claude-haiku-4-5-20251001",
-            "content": [{"type": "tool_use", "id": "sub-tu-002", "name": "WebSearch",
-                         "input": {"query": "Ruby gem SVG chart library"}}],
+            "content": [
+              {
+                "type": "tool_use",
+                "id": "sub-tu-002",
+                "name": "WebSearch",
+                "input": { "query": "Ruby gem SVG chart library" }
+              }
+            ],
             "usage": {
               "input_tokens": 100,
               "output_tokens": 20,
@@ -139,7 +158,7 @@
           "message": {
             "role": "assistant",
             "model": "claude-haiku-4-5-20251001",
-            "content": [{"type": "text", "text": "No suitable Ruby library found."}],
+            "content": [{ "type": "text", "text": "No suitable Ruby library found." }],
             "usage": {
               "input_tokens": 200,
               "output_tokens": 80,

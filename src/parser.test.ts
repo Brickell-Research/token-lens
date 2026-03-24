@@ -1,7 +1,7 @@
-import { describe, it, expect } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import { join } from "node:path";
 import { Parser } from "./parser";
-import { toolUses, toolResults } from "./token";
+import { toolResults, toolUses } from "./token";
 import type { Node } from "./types";
 
 const fixturePath = join(import.meta.dir, "fixtures", "capture.json");
@@ -92,44 +92,29 @@ describe("Parser", () => {
     const outerAssistant = agentTree[0].children[0];
 
     it("attaches subagent turns as sidechain children of the Agent call", () => {
-      const subagentChildren = outerAssistant.children.filter(
-        (c) => c.token.isSidechain
-      );
+      const subagentChildren = outerAssistant.children.filter((c) => c.token.isSidechain);
       expect(subagentChildren.length).toBeGreaterThan(0);
     });
 
     it("collapses streaming chain (same requestId) into one node with combined tool_uses", () => {
-      const subagentChildren = outerAssistant.children.filter(
-        (c) => c.token.isSidechain
-      );
+      const subagentChildren = outerAssistant.children.filter((c) => c.token.isSidechain);
       // prog-002 and prog-003 share req-sub-001; prog-004 is req-sub-002 -> 2 nodes
       expect(subagentChildren.length).toBe(2);
     });
 
     it("combines parallel tool_uses from the same API call", () => {
-      const subagentChildren = outerAssistant.children.filter(
-        (c) => c.token.isSidechain
-      );
+      const subagentChildren = outerAssistant.children.filter((c) => c.token.isSidechain);
       const firstTurn = subagentChildren[0];
-      expect(toolUses(firstTurn.token).map((tu) => tu.name)).toEqual([
-        "WebSearch",
-        "WebSearch",
-      ]);
+      expect(toolUses(firstTurn.token).map((tu) => tu.name)).toEqual(["WebSearch", "WebSearch"]);
     });
 
     it("sets subagent model from the progress event", () => {
-      const subagentChildren = outerAssistant.children.filter(
-        (c) => c.token.isSidechain
-      );
-      expect(subagentChildren[0].token.model).toBe(
-        "claude-haiku-4-5-20251001"
-      );
+      const subagentChildren = outerAssistant.children.filter((c) => c.token.isSidechain);
+      expect(subagentChildren[0].token.model).toBe("claude-haiku-4-5-20251001");
     });
 
     it("carries token counts from subagent usage", () => {
-      const subagentChildren = outerAssistant.children.filter(
-        (c) => c.token.isSidechain
-      );
+      const subagentChildren = outerAssistant.children.filter((c) => c.token.isSidechain);
       const first = subagentChildren[0];
       expect(first.token.inputTokens).toBe(100);
       expect(first.token.outputTokens).toBe(20);
@@ -137,12 +122,8 @@ describe("Parser", () => {
     });
 
     it("skips user-type progress events (tool results, prompts)", () => {
-      const allSidechain = outerAssistant.children.filter(
-        (c) => c.token.isSidechain
-      );
-      expect(allSidechain.every((n) => n.token.role === "assistant")).toBe(
-        true
-      );
+      const allSidechain = outerAssistant.children.filter((c) => c.token.isSidechain);
+      expect(allSidechain.every((n) => n.token.role === "assistant")).toBe(true);
     });
   });
 });

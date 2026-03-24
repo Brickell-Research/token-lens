@@ -1,20 +1,25 @@
 // Matches Ruby's escape_html (no apostrophe encoding)
-function escape(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+function escHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
+
 import { readFileSync } from "node:fs";
+import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { join, dirname, basename } from "node:path";
-import type { Node, ContentBlock } from "../types";
 import {
-  toolUses,
-  toolResults,
+  costUsd,
+  humanText,
   isHumanPrompt,
   isTaskNotification,
   taskNotificationSummary,
-  humanText,
-  costUsd,
+  toolResults,
+  toolUses,
 } from "../token";
+import type { ContentBlock, Node } from "../types";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -75,7 +80,7 @@ export class Html {
     const totalTop = (maxDepth + 1) * ROW_HEIGHT;
     const totalTokens = nodes.reduce((s, n) => s + (n.subtreeTokens ?? 0), 0);
     const totalCost = nodes.reduce((s, n) => s + (n.subtreeCost ?? 0), 0);
-    const totalTip = escapeJs(escape(this.totalSummary(allFlat)));
+    const totalTip = escapeJs(escHtml(this.totalSummary(allFlat)));
     this.rereadFiles = this.buildRereadMap(all);
     this.threadCount = nodes.length;
     this.threadNumbers = new Map();
@@ -154,9 +159,9 @@ ${jsText}
 
   private barHtml(node: Node): string {
     const t = node.token;
-    const lbl = escape(this.label(node));
+    const lbl = escHtml(this.label(node));
     const clbl = this.costLabel(node);
-    const tip = escape(this.tooltip(node));
+    const tip = escHtml(this.tooltip(node));
     const left = this.pct(node.x ?? 0);
     const width = this.pct(node.w ?? 0);
     const lblHidden = (node.w ?? 0) < MIN_LABEL_PX ? ` style="display:none"` : "";
@@ -165,19 +170,17 @@ ${jsText}
     if (this.rereadBar(node)) extraClass += " bar-reread";
     // is_compaction on assistant turns is for summary counting only; color is set via colorClass on the user prompt
     if (!t.isCompaction && this.contextPressure(node)) extraClass += " bar-pressure";
-    const ftip = escape(this.tokenSummary(node));
+    const ftip = escHtml(this.tokenSummary(node));
     let mouseover: string;
     if (isTaskNotification(t)) {
       const summary = taskNotificationSummary(t) || "Task callback";
-      mouseover = `tip('${escapeJs(tip)}','${escape(escapeJs(summary))}')`;
+      mouseover = `tip('${escapeJs(tip)}','${escHtml(escapeJs(summary))}')`;
     } else if (isHumanPrompt(t)) {
-      mouseover = `tip('${escapeJs(tip)}','${escape(escapeJs(humanText(t)))}')`;
+      mouseover = `tip('${escapeJs(tip)}','${escHtml(escapeJs(humanText(t)))}')`;
     } else {
       mouseover = `tip('${escapeJs(tip)}')`;
     }
-    const badge = this.rereadBar(node)
-      ? `<span class="warn-badge">\u26a0</span>`
-      : "";
+    const badge = this.rereadBar(node) ? `<span class="warn-badge">\u26a0</span>` : "";
     return `<div class="bar${extraClass}" style="left:${left}%;width:calc(${width}% + 1px);top:${node.y ?? 0}px" data-ox="${node.x ?? 0}" data-ow="${node.w ?? 0}" data-cx="${node.costX ?? 0}" data-cw="${node.costW ?? 0}" data-token-lbl="${lbl}" data-cost-lbl="${clbl}" data-ftip="${ftip}" onmouseover="${mouseover}" onmouseout="tip('')" onclick="zoom(this)"><span class="lbl"${lblHidden}>${lbl}</span>${badge}</div>`;
   }
 
@@ -202,10 +205,7 @@ ${jsText}
   private tokenSummary(node: Node): string {
     const t = node.token;
     const tok = fmt(node.subtreeTokens ?? 0);
-    const cost =
-      (node.subtreeCost ?? 0) > 0
-        ? ` \u00b7 ${fmtCost(node.subtreeCost ?? 0)}`
-        : "";
+    const cost = (node.subtreeCost ?? 0) > 0 ? ` \u00b7 ${fmtCost(node.subtreeCost ?? 0)}` : "";
     if (isTaskNotification(t)) {
       const summary = taskNotificationSummary(t) || "Task callback";
       const nameMatch = summary.match(/Agent "([^"]+)"/);
@@ -213,9 +213,7 @@ ${jsText}
       return `\u21a9 ${name} \u00b7 ${tok} tokens${cost}`;
     } else if (isHumanPrompt(t)) {
       const num = this.threadNumbers.get(t.uuid);
-      return num
-        ? `Thread ${num} \u00b7 ${tok} tokens${cost}`
-        : `${tok} tokens${cost}`;
+      return num ? `Thread ${num} \u00b7 ${tok} tokens${cost}` : `${tok} tokens${cost}`;
     } else if (t.isSidechain) {
       return `[${modelShort(t.model)}] ${tok} tokens${cost}`;
     } else {
@@ -235,17 +233,21 @@ ${jsText}
     const uses = toolUses(node.token);
     if (uses.length === 0) return 0;
     const userChild = node.children.find(
-      (c) => c.token.role === "user" && toolResults(c.token).length > 0
+      (c) => c.token.role === "user" && toolResults(c.token).length > 0,
     );
     if (!userChild) return 0;
     let chars = 0;
     for (const tu of uses) {
       const results = toolResults(userChild.token);
       const tr = results.find(
-        (r) => (r as unknown as Record<string, unknown>)["tool_use_id"] === tu.id
+        (r) => (r as unknown as Record<string, unknown>)["tool_use_id"] === tu.id,
       );
       if (!tr) continue;
-      const content = Array.isArray(tr.content) ? tr.content : tr.content != null ? [tr.content] : [];
+      const content = Array.isArray(tr.content)
+        ? tr.content
+        : tr.content != null
+          ? [tr.content]
+          : [];
       for (const c of content) {
         if (typeof c === "object" && c !== null && (c as Record<string, unknown>)["text"] != null) {
           chars += String((c as Record<string, unknown>)["text"]).length;
@@ -261,28 +263,22 @@ ${jsText}
     const anodes = all.filter((n) => n.token.role === "assistant");
     const rawInput = anodes.reduce((s, n) => s + n.token.inputTokens, 0);
     const cached = anodes.reduce((s, n) => s + n.token.cacheReadTokens, 0);
-    const cacheNew = anodes.reduce(
-      (s, n) => s + n.token.cacheCreationTokens,
-      0
-    );
+    const cacheNew = anodes.reduce((s, n) => s + n.token.cacheCreationTokens, 0);
     const totalInput = rawInput + cached + cacheNew;
     const totalCost = anodes.reduce((s, n) => s + costUsd(n.token), 0);
-    const hitRate =
-      totalInput > 0 && cached > 0 ? (cached / totalInput) * 100 : null;
+    const hitRate = totalInput > 0 && cached > 0 ? (cached / totalInput) * 100 : null;
     const models = [
       ...new Set(
         anodes
           .map((n) => n.token.model)
           .filter(Boolean)
-          .map((m) => modelShort(m))
+          .map((m) => modelShort(m)),
       ),
     ].join(", ");
 
     return {
       assistantNodes: anodes,
-      prompts: all.filter(
-        (n) => isHumanPrompt(n.token) && !isTaskNotification(n.token)
-      ).length,
+      prompts: all.filter((n) => isHumanPrompt(n.token) && !isTaskNotification(n.token)).length,
       allPrompts: all.filter((n) => isHumanPrompt(n.token)).length,
       tasks: all.filter((n) => isTaskNotification(n.token)).length,
       turns: anodes.filter((n) => !n.token.isSidechain).length,
@@ -297,7 +293,7 @@ ${jsText}
       compactions: all.filter(
         (n) =>
           isHumanPrompt(n.token) &&
-          humanText(n.token).startsWith("This session is being continued")
+          humanText(n.token).startsWith("This session is being continued"),
       ).length,
       pressure: anodes.filter((n) => this.contextPressure(n)).length,
       models,
@@ -324,21 +320,13 @@ ${jsText}
     const m = this.computeSessionMetrics(all);
     const parts: (string | null)[] = [];
     if (this.threadCount > 1) parts.push(`${this.threadCount} threads`);
-    parts.push(
-      `${m.prompts} ${m.prompts === 1 ? "prompt" : "prompts"}`
-    );
+    parts.push(`${m.prompts} ${m.prompts === 1 ? "prompt" : "prompts"}`);
     if (m.tasks > 0) {
-      parts.push(
-        `${m.tasks} ${m.tasks === 1 ? "task callback" : "task callbacks"}`
-      );
+      parts.push(`${m.tasks} ${m.tasks === 1 ? "task callback" : "task callbacks"}`);
     }
-    parts.push(
-      `${m.turns} main ${m.turns === 1 ? "turn" : "turns"}`
-    );
+    parts.push(`${m.turns} main ${m.turns === 1 ? "turn" : "turns"}`);
     if (m.sub > 0) {
-      parts.push(
-        `${m.sub} subagent ${m.sub === 1 ? "turn" : "turns"}`
-      );
+      parts.push(`${m.sub} subagent ${m.sub === 1 ? "turn" : "turns"}`);
     }
     parts.push(this.computeDuration(all));
     if (m.marginal > 0) parts.push(`fresh input: ${fmt(m.marginal)}`);
@@ -385,7 +373,7 @@ ${jsText}
   private legendHtml(): string {
     return LEGEND_ITEMS.map(
       ([cssClass, lbl]) =>
-        `<span class="legend-item"><span class="legend-swatch ${cssClass}"></span>${lbl}</span>`
+        `<span class="legend-item"><span class="legend-swatch ${cssClass}"></span>${lbl}</span>`,
     ).join("");
   }
 
@@ -393,10 +381,7 @@ ${jsText}
     const t = node.token;
     if (isTaskNotification(t)) return "bar-c-task";
     if (t.isSidechain) return "bar-c-sidechain";
-    if (
-      isHumanPrompt(t) &&
-      humanText(t).startsWith("This session is being continued")
-    )
+    if (isHumanPrompt(t) && humanText(t).startsWith("This session is being continued"))
       return "bar-compaction";
     if (isHumanPrompt(t)) return "bar-c-human";
     switch (t.role) {
@@ -423,24 +408,16 @@ ${jsText}
       let toolStr: string;
       if (uses.length === 1) {
         const brief = this.toolInput(uses[0], "brief");
-        toolStr =
-          brief.length === 0
-            ? (uses[0].name ?? "")
-            : `${uses[0].name}: ${brief}`;
+        toolStr = brief.length === 0 ? (uses[0].name ?? "") : `${uses[0].name}: ${brief}`;
       } else {
         toolStr = uses.map((u) => u.name ?? "").join(", ");
       }
-      const badge =
-        t.isSidechain && t.agentId
-          ? this.agentLabels.get(t.agentId)
-          : undefined;
+      const badge = t.isSidechain && t.agentId ? this.agentLabels.get(t.agentId) : undefined;
       return badge ? `[${badge}] ${toolStr}` : toolStr;
     } else if (t.role === "assistant") {
       let prefix: string;
       if (t.isSidechain) {
-        const agentLbl = t.agentId
-          ? this.agentLabels.get(t.agentId)
-          : undefined;
+        const agentLbl = t.agentId ? this.agentLabels.get(t.agentId) : undefined;
         prefix = agentLbl
           ? `[${modelShort(t.model)} \u00b7 ${agentLbl}] `
           : `[${modelShort(t.model)}] `;
@@ -448,8 +425,7 @@ ${jsText}
         prefix = "";
       }
       const textBlock = t.content.find(
-        (c): c is ContentBlock =>
-          typeof c === "object" && c !== null && c.type === "text"
+        (c): c is ContentBlock => typeof c === "object" && c !== null && c.type === "text",
       );
       const text = (textBlock?.text ?? "").trim();
       return text.length > 0
@@ -468,12 +444,9 @@ ${jsText}
     } else {
       parts.push(`${fmt(node.subtreeTokens ?? 0)} tokens`);
       if (t.model) parts.push(t.model);
-      if (t.marginalInputTokens > 0)
-        parts.push(`fresh input: ${fmt(t.marginalInputTokens)}`);
-      if (t.cacheReadTokens > 0)
-        parts.push(`cached input: ${fmt(t.cacheReadTokens)}`);
-      if (t.cacheCreationTokens > 0)
-        parts.push(`written to cache: ${fmt(t.cacheCreationTokens)}`);
+      if (t.marginalInputTokens > 0) parts.push(`fresh input: ${fmt(t.marginalInputTokens)}`);
+      if (t.cacheReadTokens > 0) parts.push(`cached input: ${fmt(t.cacheReadTokens)}`);
+      if (t.cacheCreationTokens > 0) parts.push(`written to cache: ${fmt(t.cacheCreationTokens)}`);
       parts.push(`output: ${fmt(t.outputTokens)}`);
       const tokenCost = costUsd(t);
       if (tokenCost > 0) parts.push(`cost: ${fmtCost(tokenCost)}`);
@@ -490,9 +463,7 @@ ${jsText}
         const path = String(tu.input?.["file_path"] ?? "");
         const count = this.rereadFiles.get(path);
         if (count !== undefined) {
-          parts.push(
-            `\u26a0 ${basename(path)} accessed ${count}x in session`
-          );
+          parts.push(`\u26a0 ${basename(path)} accessed ${count}x in session`);
         }
       }
     }
@@ -532,9 +503,7 @@ ${jsText}
           : `search:${String(input["query"] ?? "")}`;
       case "WebFetch": {
         const url = String(input["url"] ?? "");
-        return format === "brief"
-          ? url.split("/").slice(-2).join("/")
-          : url;
+        return format === "brief" ? url.split("/").slice(-2).join("/") : url;
       }
       default:
         return "";
@@ -543,8 +512,7 @@ ${jsText}
 
   private contextPressure(node: Node): boolean {
     const t = node.token;
-    const total =
-      t.inputTokens + t.cacheReadTokens + t.cacheCreationTokens;
+    const total = t.inputTokens + t.cacheReadTokens + t.cacheCreationTokens;
     return total > CONTEXT_LIMIT * 0.7;
   }
 
@@ -560,18 +528,11 @@ ${jsText}
     if (durationStr) rows.push(summaryStat("Duration", durationStr));
     if (m.models.length > 0) rows.push(summaryStat("Models", m.models));
     rows.push(summaryStat("Total cost", fmtCost(m.totalCost)));
-    if (m.hitRate != null)
-      rows.push(summaryStat("Cache hit rate", `${m.hitRate.toFixed(1)}%`));
+    if (m.hitRate != null) rows.push(summaryStat("Cache hit rate", `${m.hitRate.toFixed(1)}%`));
     rows.push(summaryStat("Total input", `${fmt(m.totalInput)} tok`));
     rows.push(summaryStat("Total output", `${fmt(m.output)} tok`));
-    if (m.compactions > 0)
-      rows.push(
-        summaryStat("Compaction events", String(m.compactions), true)
-      );
-    if (m.pressure > 0)
-      rows.push(
-        summaryStat("High context turns", String(m.pressure), true)
-      );
+    if (m.compactions > 0) rows.push(summaryStat("Compaction events", String(m.compactions), true));
+    if (m.pressure > 0) rows.push(summaryStat("High context turns", String(m.pressure), true));
 
     return `<div id="summary-panel" class="summary-panel" style="display:none">
   <div class="summary-panel-title">Session Summary <button class="summary-close" onclick="toggleSummary()">&#x2715;</button></div>
@@ -604,12 +565,8 @@ ${jsText}
     }
     this.hmCount = groups.length;
 
-    const groupTokens = groups.map((g) =>
-      g.reduce((s, n) => s + (n.subtreeTokens ?? 0), 0)
-    );
-    const groupCosts = groups.map((g) =>
-      g.reduce((s, n) => s + (n.subtreeCost ?? 0), 0)
-    );
+    const groupTokens = groups.map((g) => g.reduce((s, n) => s + (n.subtreeTokens ?? 0), 0));
+    const groupCosts = groups.map((g) => g.reduce((s, n) => s + (n.subtreeCost ?? 0), 0));
     const minTok = Math.min(...groupTokens);
     const maxTok = Math.max(...groupTokens);
     const minCost = Math.min(...groupCosts);
@@ -623,37 +580,27 @@ ${jsText}
         const hasCompaction = group.length > 1;
 
         const colorCost = heatmapColor(combinedCost, minCost, maxCost);
-        const colorToken = heatmapColorToken(
-          combinedTokens,
-          minTok,
-          maxTok
-        );
+        const colorToken = heatmapColorToken(combinedTokens, minTok, maxTok);
 
         // x/w spans all nodes in the group
         const last = group[group.length - 1];
         const ox = primary.x ?? 0;
         const ow = (last.x ?? 0) + (last.w ?? 0) - (primary.x ?? 0);
         const cx = primary.costX ?? 0;
-        const cw =
-          (last.costX ?? 0) + (last.costW ?? 0) - (primary.costX ?? 0);
+        const cw = (last.costX ?? 0) + (last.costW ?? 0) - (primary.costX ?? 0);
 
         const num = this.threadNumbers.get(primary.token.uuid);
         const tokStr = fmt(combinedTokens);
-        const costStr =
-          combinedCost > 0 ? ` \u00b7 ${fmtCost(combinedCost)}` : "";
+        const costStr = combinedCost > 0 ? ` \u00b7 ${fmtCost(combinedCost)}` : "";
         const compactNote = hasCompaction ? " \u00b7 \u21ba compaction" : "";
         const base = num ? `Thread ${num}` : `Prompt ${i + 1}`;
-        const tipText = escape(
-          escapeJs(`${base} \u00b7 ${tokStr} tokens${costStr}${compactNote}`)
+        const tipText = escHtml(
+          escapeJs(`${base} \u00b7 ${tokStr} tokens${costStr}${compactNote}`),
         );
-        const tipPrompt = escape(escapeJs(humanText(primary.token)));
-        const promptSearch = escape(
-          truncate(humanText(primary.token), 300).toLowerCase()
-        );
+        const tipPrompt = escHtml(escapeJs(humanText(primary.token)));
+        const promptSearch = escHtml(truncate(humanText(primary.token), 300).toLowerCase());
 
-        const badge = hasCompaction
-          ? `<span class="hm-compact-badge">\u21ba</span>`
-          : "";
+        const badge = hasCompaction ? `<span class="hm-compact-badge">\u21ba</span>` : "";
         return `<div class="hm-cell" tabindex="0" data-idx="${i}" data-cost="${combinedCost}" data-tokens="${combinedTokens}" data-prompt="${promptSearch}" data-color-cost="${colorCost}" data-color-token="${colorToken}" data-ox="${ox}" data-ow="${ow}" data-cx="${cx}" data-cw="${cw}" data-tip="${tipText}" data-tip-prompt="${tipPrompt}" style="background-color:${colorToken}" onmouseover="hmTip(this)" onmouseout="tip('')" onclick="openPrompt(${i})"><span class="hm-idx">${i + 1}</span>${badge}</div>`;
       })
       .join("\n");
@@ -700,20 +647,16 @@ function escapeJs(str: string): string {
 
 function heatmapColor(value: number, minVal: number, maxVal: number): string {
   let t = maxVal === minVal ? 0.5 : (value - minVal) / (maxVal - minVal);
-  t = Math.pow(t, 0.7);
+  t = t ** 0.7;
   const r = clamp(Math.round(32 + (255 - 32) * t), 0, 255);
   const g = clamp(Math.round(5 + (20 - 5) * t), 0, 255);
   const b = clamp(Math.round(16 + (147 - 16) * t), 0, 255);
   return `#${hex(r)}${hex(g)}${hex(b)}`;
 }
 
-function heatmapColorToken(
-  value: number,
-  minVal: number,
-  maxVal: number
-): string {
+function heatmapColorToken(value: number, minVal: number, maxVal: number): string {
   let t = maxVal === minVal ? 0.5 : (value - minVal) / (maxVal - minVal);
-  t = Math.pow(t, 0.7);
+  t = t ** 0.7;
   const r = clamp(Math.round(7 + (0 - 7) * t), 0, 255);
   const g = clamp(Math.round(48 + (206 - 48) * t), 0, 255);
   const b = clamp(Math.round(48 + (209 - 48) * t), 0, 255);
@@ -759,11 +702,7 @@ function truncate(str: string, len: number): string {
   return str.length > len ? `${str.slice(0, len)}\u2026` : str;
 }
 
-function summaryStat(
-  label: string,
-  value: string,
-  warn = false
-): string {
+function summaryStat(label: string, value: string, warn = false): string {
   const valClass = warn ? "summary-val summary-warn" : "summary-val";
-  return `<dt class="summary-dt">${escape(label)}</dt><dd class="${valClass}">${escape(value)}</dd>`;
+  return `<dt class="summary-dt">${escHtml(label)}</dt><dd class="${valClass}">${escHtml(value)}</dd>`;
 }

@@ -1,8 +1,8 @@
 import { mkdirSync, writeFileSync } from "node:fs";
-import { join, dirname } from "node:path";
 import { homedir } from "node:os";
-import type { RawEvent } from "../types";
+import { dirname, join } from "node:path";
 import { startJsonlSource } from "../sources/jsonl";
+import type { RawEvent } from "../types";
 
 export interface RecordOptions {
   durationInSeconds: number;
@@ -45,8 +45,8 @@ export class RecordCommand {
         JSON.stringify(
           events.map((e) => ({ event: e })),
           null,
-          2
-        )
+          2,
+        ),
       );
       process.stderr.write(`Saved to ${outputPath}\n`);
       process.exit(0);

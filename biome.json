@@ -1,6 +1,12 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.0.0/schema.json",
-  "organizeImports": { "enabled": true },
+  "$schema": "https://biomejs.dev/schemas/2.4.8/schema.json",
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
   "linter": {
     "enabled": true,
     "rules": {
@@ -23,6 +29,6 @@
     }
   },
   "files": {
-    "ignore": ["dist/", "node_modules/", "lib/", "spec/"]
+    "includes": ["**", "!dist/", "!node_modules/", "!lib/", "!spec/", "!flame.html", "!flame.svg"]
   }
 }

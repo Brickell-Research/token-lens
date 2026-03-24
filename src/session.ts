@@ -1,6 +1,6 @@
-import { existsSync, readdirSync, statSync, openSync, readSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, openSync, readdirSync, readSync, statSync } from "node:fs";
 import { homedir } from "node:os";
+import { join } from "node:path";
 import type { RawEvent } from "./types";
 
 export const CLAUDE_DIR = join(homedir(), ".claude", "projects");
@@ -51,7 +51,7 @@ export function activeOrLatestJsonl(dir?: string): string {
   } catch {
     const path = latestJsonl();
     process.stderr.write(
-      `  [session] no sessions for ${dir ?? process.cwd()}, using most recent: ${path}\n`
+      `  [session] no sessions for ${dir ?? process.cwd()}, using most recent: ${path}\n`,
     );
     return path;
   }

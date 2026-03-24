@@ -8,7 +8,7 @@
       "timestamp": "2026-03-23T10:00:00.000Z",
       "message": {
         "role": "user",
-        "content": [{"type": "text", "text": "How does the parser work?"}],
+        "content": [{ "type": "text", "text": "How does the parser work?" }],
         "usage": {}
       }
     }
@@ -25,8 +25,13 @@
         "role": "assistant",
         "model": "claude-opus-4-6",
         "content": [
-          {"type": "text", "text": "Let me check the lib directory."},
-          {"type": "tool_use", "id": "tool-001", "name": "Bash", "input": {"command": "ls lib/"}}
+          { "type": "text", "text": "Let me check the lib directory." },
+          {
+            "type": "tool_use",
+            "id": "tool-001",
+            "name": "Bash",
+            "input": { "command": "ls lib/" }
+          }
         ],
         "usage": {
           "input_tokens": 800,
@@ -47,7 +52,11 @@
       "message": {
         "role": "user",
         "content": [
-          {"type": "tool_result", "tool_use_id": "tool-001", "content": [{"type": "text", "text": "parser.rb\nsession.rb\n"}]}
+          {
+            "type": "tool_result",
+            "tool_use_id": "tool-001",
+            "content": [{ "type": "text", "text": "parser.rb\nsession.rb\n" }]
+          }
         ],
         "usage": {}
       }
@@ -65,8 +74,13 @@
         "role": "assistant",
         "model": "claude-opus-4-6",
         "content": [
-          {"type": "text", "text": "Let me read the parser."},
-          {"type": "tool_use", "id": "tool-002", "name": "Read", "input": {"file_path": "lib/token_lens/parser.rb"}}
+          { "type": "text", "text": "Let me read the parser." },
+          {
+            "type": "tool_use",
+            "id": "tool-002",
+            "name": "Read",
+            "input": { "file_path": "lib/token_lens/parser.rb" }
+          }
         ],
         "usage": {
           "input_tokens": 1200,
@@ -87,7 +101,11 @@
       "message": {
         "role": "user",
         "content": [
-          {"type": "tool_result", "tool_use_id": "tool-002", "content": [{"type": "text", "text": "# parser contents..."}]}
+          {
+            "type": "tool_result",
+            "tool_use_id": "tool-002",
+            "content": [{ "type": "text", "text": "# parser contents..." }]
+          }
         ],
         "usage": {}
       }
@@ -105,7 +123,10 @@
         "role": "assistant",
         "model": "claude-opus-4-6",
         "content": [
-          {"type": "text", "text": "The parser reads JSONL and OTLP events and splits them by source."}
+          {
+            "type": "text",
+            "text": "The parser reads JSONL and OTLP events and splits them by source."
+          }
         ],
         "usage": {
           "input_tokens": 2000,
@@ -125,7 +146,7 @@
       "timestamp": "2026-03-23T10:01:00.000Z",
       "message": {
         "role": "user",
-        "content": [{"type": "text", "text": "Now write a test for it."}],
+        "content": [{ "type": "text", "text": "Now write a test for it." }],
         "usage": {}
       }
     }
@@ -142,8 +163,15 @@
         "role": "assistant",
         "model": "claude-opus-4-6",
         "content": [
-          {"type": "tool_use", "id": "agent-tool-001", "name": "Agent",
-           "input": {"description": "Write a test for the parser", "prompt": "Write a comprehensive RSpec test for TokenLens::Parser covering tree building and edge cases."}}
+          {
+            "type": "tool_use",
+            "id": "agent-tool-001",
+            "name": "Agent",
+            "input": {
+              "description": "Write a test for the parser",
+              "prompt": "Write a comprehensive RSpec test for TokenLens::Parser covering tree building and edge cases."
+            }
+          }
         ],
         "usage": {
           "input_tokens": 500,
@@ -170,7 +198,7 @@
           "uuid": "sub-user-001",
           "message": {
             "role": "user",
-            "content": [{"type": "text", "text": "Write a comprehensive RSpec test..."}]
+            "content": [{ "type": "text", "text": "Write a comprehensive RSpec test..." }]
           }
         }
       }
@@ -195,8 +223,12 @@
             "role": "assistant",
             "model": "claude-haiku-4-5-20251001",
             "content": [
-              {"type": "tool_use", "id": "sub-tu-001", "name": "Read",
-               "input": {"file_path": "lib/token_lens/parser.rb"}}
+              {
+                "type": "tool_use",
+                "id": "sub-tu-001",
+                "name": "Read",
+                "input": { "file_path": "lib/token_lens/parser.rb" }
+              }
             ],
             "usage": {
               "input_tokens": 200,
@@ -228,8 +260,12 @@
             "role": "assistant",
             "model": "claude-haiku-4-5-20251001",
             "content": [
-              {"type": "tool_use", "id": "sub-tu-002", "name": "Write",
-               "input": {"file_path": "spec/token_lens/parser_spec.rb"}}
+              {
+                "type": "tool_use",
+                "id": "sub-tu-002",
+                "name": "Write",
+                "input": { "file_path": "spec/token_lens/parser_spec.rb" }
+              }
             ],
             "usage": {
               "input_tokens": 350,

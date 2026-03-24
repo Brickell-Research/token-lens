@@ -1,7 +1,7 @@
-import { describe, it, expect } from "bun:test";
-import { layout } from "./layout";
-import { annotate } from "./annotator";
+import { describe, expect, it } from "bun:test";
 import type { Node, Token } from "../types";
+import { annotate } from "./annotator";
+import { layout } from "./layout";
 
 function makeToken(overrides: Partial<Token> = {}): Token {
   return {

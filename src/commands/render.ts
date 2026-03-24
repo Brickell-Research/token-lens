@@ -1,11 +1,11 @@
-import { writeFileSync, readdirSync, statSync, existsSync } from "node:fs";
-import { join, dirname } from "node:path";
+import { existsSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
+import { dirname, join } from "node:path";
 import { Parser } from "../parser";
-import { Reshaper } from "../renderer/reshaper";
 import { annotate } from "../renderer/annotator";
-import { layout } from "../renderer/layout";
 import { Html } from "../renderer/html";
+import { layout } from "../renderer/layout";
+import { Reshaper } from "../renderer/reshaper";
 import { activeOrLatestJsonl } from "../session";
 
 export interface RenderOptions {
@@ -25,9 +25,7 @@ export class Render {
     process.stderr.write(`Rendering ${filePath}\n`);
     const tree = new Parser(filePath).parse();
     const reshapedTree = new Reshaper().reshape(tree);
-    reshapedTree.sort((a, b) =>
-      (a.token.timestamp ?? "").localeCompare(b.token.timestamp ?? "")
-    );
+    reshapedTree.sort((a, b) => (a.token.timestamp ?? "").localeCompare(b.token.timestamp ?? ""));
     annotate(reshapedTree);
     const canvasWidth = layout(reshapedTree);
     const html = new Html(canvasWidth).render(reshapedTree);
@@ -54,9 +52,7 @@ export class Render {
       }
     }
 
-    process.stderr.write(
-      "No saved captures found — reading active Claude Code session directly\n"
-    );
+    process.stderr.write("No saved captures found — reading active Claude Code session directly\n");
     return activeOrLatestJsonl();
   }
 }

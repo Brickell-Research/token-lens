@@ -1,13 +1,13 @@
 import { readFileSync } from "node:fs";
-import type { Node, RawEvent, Token } from "./types";
 import {
   createToken,
+  humanText,
   isHumanPrompt,
   isTaskNotification,
-  humanText,
   toolUses,
   withToken,
 } from "./token";
+import type { Node, RawEvent, Token } from "./types";
 
 function getOrInit<K, V>(m: Map<K, V[]>, k: K): V[] {
   let a = m.get(k);
@@ -154,13 +154,14 @@ export class Parser {
     }
 
     const combinedToolUses = Array.from(seenIds.values());
-    const rawContent = combinedToolUses.length > 0
-      ? combinedToolUses
-      : Array.isArray(inner.content)
-        ? inner.content
-        : inner.content == null
-          ? []
-          : [inner.content];
+    const rawContent =
+      combinedToolUses.length > 0
+        ? combinedToolUses
+        : Array.isArray(inner.content)
+          ? inner.content
+          : inner.content == null
+            ? []
+            : [inner.content];
 
     const content = rawContent as Token["content"];
 
@@ -263,9 +264,7 @@ export class Parser {
     try {
       return readFileSync(this.filePath, "utf-8");
     } catch (e) {
-      throw new ParseError(
-        `Failed to read file: ${e instanceof Error ? e.message : String(e)}`,
-      );
+      throw new ParseError(`Failed to read file: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
 }

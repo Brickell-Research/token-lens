@@ -1,5 +1,5 @@
+import { costUsd, displayWidth } from "../token";
 import type { Node } from "../types";
-import { displayWidth, costUsd } from "../token";
 
 export function annotate(nodes: Node[], depth = 0): void {
   for (const node of nodes) {

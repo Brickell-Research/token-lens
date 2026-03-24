@@ -1,5 +1,5 @@
-import type { RawEvent } from "../types";
 import { activeJsonl, activeOrLatestJsonl, tailFile } from "../session";
+import type { RawEvent } from "../types";
 
 export interface JsonlSourceOptions {
   projectDir?: string;
@@ -7,9 +7,7 @@ export interface JsonlSourceOptions {
 }
 
 export function startJsonlSource(opts: JsonlSourceOptions): () => void {
-  const path = opts.projectDir
-    ? activeJsonl(opts.projectDir)
-    : activeOrLatestJsonl();
+  const path = opts.projectDir ? activeJsonl(opts.projectDir) : activeOrLatestJsonl();
   console.error(`Recording: ${path}`);
   return tailFile(path, opts.onEvent);
 }

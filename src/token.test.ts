@@ -1,15 +1,15 @@
-import { describe, it, expect } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import {
-  createToken,
-  withToken,
   costUsd,
-  totalTokens,
+  createToken,
   displayWidth,
+  humanText,
   isAssistant,
   isHumanPrompt,
-  humanText,
-  toolUses,
   toolResults,
+  toolUses,
+  totalTokens,
+  withToken,
 } from "./token";
 import type { RawEvent, Token } from "./types";
 
@@ -77,9 +77,7 @@ describe("createToken", () => {
       name: "Bash",
     });
     const token = createToken(raw);
-    expect(toolUses(token)).toEqual([
-      { type: "tool_use", id: "t1", name: "Bash" },
-    ]);
+    expect(toolUses(token)).toEqual([{ type: "tool_use", id: "t1", name: "Bash" }]);
   });
 
   it("handles missing usage gracefully", () => {

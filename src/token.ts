@@ -1,5 +1,5 @@
-import type { Token, ContentBlock, RawEvent } from "./types";
 import { getRatesForModel } from "./pricing";
+import type { ContentBlock, RawEvent, Token } from "./types";
 
 export function createToken(raw: RawEvent): Token {
   const msg = raw.message ?? {};
@@ -35,11 +35,12 @@ export function withToken(token: Token, overrides: Partial<Token>): Token {
 export function costUsd(token: Token): number {
   const p = getRatesForModel(token.model);
   return (
-    token.marginalInputTokens * p.input +
-    token.cacheReadTokens * p.cacheRead +
-    token.cacheCreationTokens * p.cacheCreation +
-    token.outputTokens * p.output
-  ) / 1_000_000;
+    (token.marginalInputTokens * p.input +
+      token.cacheReadTokens * p.cacheRead +
+      token.cacheCreationTokens * p.cacheCreation +
+      token.outputTokens * p.output) /
+    1_000_000
+  );
 }
 
 export function totalTokens(token: Token): number {
@@ -58,20 +59,20 @@ export function humanText(token: Token): string {
   const strBlock = token.content.find((b): b is string => typeof b === "string");
   if (strBlock !== undefined) return strBlock;
   const textBlock = token.content.find(
-    (b): b is ContentBlock => typeof b === "object" && b !== null && b.type === "text"
+    (b): b is ContentBlock => typeof b === "object" && b !== null && b.type === "text",
   );
   return textBlock?.text ?? "";
 }
 
 export function toolUses(token: Token): ContentBlock[] {
   return token.content.filter(
-    (b): b is ContentBlock => typeof b === "object" && b !== null && b.type === "tool_use"
+    (b): b is ContentBlock => typeof b === "object" && b !== null && b.type === "tool_use",
   );
 }
 
 export function toolResults(token: Token): ContentBlock[] {
   return token.content.filter(
-    (b): b is ContentBlock => typeof b === "object" && b !== null && b.type === "tool_result"
+    (b): b is ContentBlock => typeof b === "object" && b !== null && b.type === "tool_result",
   );
 }
 
@@ -79,7 +80,7 @@ export function isHumanPrompt(token: Token): boolean {
   if (token.role !== "user") return false;
   if (toolResults(token).length > 0) return false;
   return token.content.some(
-    (b) => typeof b === "string" || (typeof b === "object" && b !== null && b.type === "text")
+    (b) => typeof b === "string" || (typeof b === "object" && b !== null && b.type === "text"),
   );
 }
 

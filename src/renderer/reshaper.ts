@@ -1,5 +1,5 @@
-import type { Node } from "../types";
 import { isHumanPrompt, isTaskNotification, withToken } from "../token";
+import type { Node } from "../types";
 
 export class Reshaper {
   private pendingRoots: Node[] = [];
@@ -88,11 +88,7 @@ export class Reshaper {
   // assistant is a genuine new conversational turn and gets hoisted.
   // ---------------------------------------------------------------------------
 
-  private flattenThread(
-    nodes: Node[],
-    prevInput: number,
-    throughAssistant: boolean,
-  ): Node[] {
+  private flattenThread(nodes: Node[], prevInput: number, throughAssistant: boolean): Node[] {
     return nodes.flatMap((node) => {
       const t = node.token;
 
@@ -127,10 +123,7 @@ export class Reshaper {
           children: flattenedSidechain,
         };
 
-        return [
-          updated,
-          ...this.flattenThread(chain, t.inputTokens, true),
-        ];
+        return [updated, ...this.flattenThread(chain, t.inputTokens, true)];
       } else if (throughAssistant) {
         // Human prompt after an assistant -- genuine new turn, hoist to top level.
         this.pendingRoots.push(node);

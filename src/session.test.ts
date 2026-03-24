@@ -1,7 +1,7 @@
-import { describe, it, expect } from "bun:test";
-import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
-import { join } from "node:path";
+import { describe, expect, it } from "bun:test";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { encodedCwd } from "./session";
 
 describe("encodedCwd", () => {
@@ -14,8 +14,6 @@ describe("encodedCwd", () => {
   });
 
   it("handles paths with dots and spaces", () => {
-    expect(encodedCwd("/home/user/my.project name")).toBe(
-      "-home-user-my-project-name"
-    );
+    expect(encodedCwd("/home/user/my.project name")).toBe("-home-user-my-project-name");
   });
 });
