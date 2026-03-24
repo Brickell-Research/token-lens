@@ -12,7 +12,7 @@ program
 program
   .command("record")
   .description("Tail the active session and auto-save a capture file")
-  .option("--duration-in-seconds <n>", "Seconds to record", "30")
+  .option("--duration-in-seconds <n>", "Stop after N seconds (default: run until Ctrl+C)")
   .option(
     "--project-dir <path>",
     "Working directory of the Claude Code session to record",
@@ -20,7 +20,7 @@ program
   .option("--output <path>", "Save path for the capture")
   .action(async (opts) => {
     await record({
-      durationInSeconds: parseInt(opts.durationInSeconds, 10),
+      durationInSeconds: opts.durationInSeconds ? parseInt(opts.durationInSeconds, 10) : undefined,
       projectDir: opts.projectDir,
       output: opts.output,
     });

@@ -5,7 +5,7 @@ import { activeJsonl, activeOrLatestJsonl, tailFile } from "../session";
 import type { RawEvent } from "../types";
 
 export interface RecordOptions {
-  durationInSeconds: number;
+  durationInSeconds?: number;
   projectDir?: string;
   output?: string;
 }
@@ -20,13 +20,23 @@ export async function record(opts: RecordOptions): Promise<void> {
   process.stderr.write(`Recording: ${jsonlPath}\n`);
   const stop = tailFile(jsonlPath, (e) => events.push(e));
 
-  process.stderr.write(`Recording for ${opts.durationInSeconds}s... (Ctrl+C to stop early)\n`);
+  const durationMsg =
+    opts.durationInSeconds !== undefined
+      ? `Recording for ${opts.durationInSeconds}s — Ctrl+C to stop early\n`
+      : `Recording — press Ctrl+C to stop and save\n`;
+  process.stderr.write(durationMsg);
   process.stderr.write(`Output: ${outputPath}\n`);
 
   let finished = false;
+
+  const ticker = setInterval(() => {
+    if (!finished) process.stderr.write(`  ${events.length} events captured...\n`);
+  }, 5000);
+
   const finish = () => {
     if (finished) return;
     finished = true;
+    clearInterval(ticker);
     stop();
     process.stderr.write(`\nCaptured ${events.length} events\n`);
     writeFileSync(
@@ -41,7 +51,9 @@ export async function record(opts: RecordOptions): Promise<void> {
     process.exit(0);
   };
 
-  setTimeout(finish, opts.durationInSeconds * 1000);
+  if (opts.durationInSeconds !== undefined) {
+    setTimeout(finish, opts.durationInSeconds * 1000);
+  }
   process.on("SIGINT", finish);
   process.on("SIGTERM", finish);
   await new Promise(() => {});

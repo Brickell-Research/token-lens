@@ -86,6 +86,10 @@
     if (lmLo) lmLo.textContent = costMode ? "cheap" : "few tokens";
     if (lmHi) lmHi.textContent = costMode ? "costly" : "many";
     scaleHeatmap();
+    if (hmSorted) {
+      hmSorted = false; // reset so sortHeatmap() will re-sort
+      sortHeatmap();
+    }
     if (wasZoomed) {
       if (wasZoomed.classList && wasZoomed.classList.contains("hm-cell")) {
         openPrompt(+wasZoomed.getAttribute("data-idx"));
@@ -98,7 +102,6 @@
     var fx = costMode ? +el.getAttribute("data-cx") : +el.getAttribute("data-ox");
     var fw = costMode ? +el.getAttribute("data-cw") : +el.getAttribute("data-ow");
     if (fw >= W - 1) {
-      unzoom();
       return;
     }
     var wrap = document.getElementById("flame-wrap");
@@ -135,6 +138,11 @@
     var btn = resetBtn();
     if (btn) btn.style.display = "none";
     zoomedEl = null;
+    // If we're still viewing a specific prompt, re-zoom to its root
+    if (hmActiveIdx >= 0) {
+      var cell = document.querySelector('.hm-cell[data-idx="' + hmActiveIdx + '"]');
+      if (cell) zoomToRoot(cell);
+    }
   };
   // resetZoom: if sub-zoomed inside a prompt → unzoom back to prompt view;
   // if viewing a prompt (or full overview) → close back to heatmap
@@ -249,8 +257,6 @@
     });
     var fw = document.getElementById("flame-wrap");
     if (fw) fw.style.display = "";
-    var lg = document.getElementById("legend");
-    if (lg) lg.style.display = "";
     var back = document.getElementById("hm-back");
     if (back) back.style.display = "";
     var cell = document.querySelector('.hm-cell[data-idx="' + idx + '"]');
@@ -267,8 +273,6 @@
     unzoom();
     var fw = document.getElementById("flame-wrap");
     if (fw) fw.style.display = "none";
-    var lg = document.getElementById("legend");
-    if (lg) lg.style.display = "none";
     var hm = document.getElementById("heatmap");
     if (hm) hm.classList.remove("hm-strip");
     hmCells().forEach((c) => {
@@ -276,11 +280,6 @@
     });
     var back = document.getElementById("hm-back");
     if (back) back.style.display = "none";
-    var si = document.getElementById("hm-search");
-    if (si) {
-      si.value = "";
-      filterHeatmap("");
-    }
   };
   window.sortHeatmap = () => {
     hmSorted = !hmSorted;
@@ -354,8 +353,23 @@
       openPrompt(+document.activeElement.getAttribute("data-idx"));
       return;
     }
-    if (hmActiveIdx < 0) return;
     if (e.target && e.target.tagName === "INPUT") return;
+    if (e.key === "c" && !e.metaKey && !e.ctrlKey) {
+      e.preventDefault();
+      toggleCostView();
+      return;
+    }
+    if (e.key === "t" && !e.metaKey && !e.ctrlKey) {
+      e.preventDefault();
+      toggleTheme();
+      return;
+    }
+    if (e.key === "s" && !e.metaKey && !e.ctrlKey) {
+      e.preventDefault();
+      toggleSummary();
+      return;
+    }
+    if (hmActiveIdx < 0) return;
     if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
       e.preventDefault();
       if (hmActiveIdx > 0) openPrompt(hmActiveIdx - 1);

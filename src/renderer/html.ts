@@ -118,7 +118,6 @@ export class Html {
 <meta charset="utf-8">
 <title>Token Lens \u00b7 Brickell Research</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,600;1,400&display=swap');
 ${cssText}
 </style>
 </head>
@@ -126,7 +125,7 @@ ${cssText}
 <div class="header">
   <div>
     <div class="summary">${this.summaryText(allFlat)}</div>
-    <div class="legend" id="legend" style="display:none">${LEGEND_ITEMS.map(([cssClass, lbl]) => `<span class="legend-item"><span class="legend-swatch ${cssClass}"></span>${lbl}</span>`).join("")}</div>
+    <div class="legend" id="legend">${LEGEND_ITEMS.map(([cssClass, lbl]) => `<span class="legend-item"><span class="legend-swatch ${cssClass}"></span>${lbl}</span>`).join("")}</div>
   </div>
   <div class="header-btns">
     <button class="theme-btn" id="theme-btn" onclick="toggleTheme()">&#x25D0; Light</button>
@@ -144,7 +143,7 @@ ${all.map((n) => this.barHtml(n)).join("\n")}
 </div>
 </div>
 <div id="ftip" class="floattip"></div>
-<div id="tip" class="tip"><span class="tip-label">Hover for details &middot; Click to zoom</span></div>
+<div id="tip" class="tip"><span class="tip-label">Select a prompt to explore &middot; <kbd>c</kbd> cost &middot; <kbd>t</kbd> theme &middot; <kbd>s</kbd> summary</span></div>
 ${this.sessionSummaryHtml(allFlat)}
 <script>
 ${jsText}
@@ -499,12 +498,35 @@ ${jsText}
     if (m.sub > 0) rows.push(summaryStat("Subagent turns", String(m.sub)));
     if (durationStr) rows.push(summaryStat("Duration", durationStr));
     if (m.models.length > 0) rows.push(summaryStat("Models", m.models));
-    rows.push(summaryStat("Total cost", fmtCost(m.totalCost)));
+    rows.push(summaryStat("Total cost", fmtCost(m.totalCost), false, true));
     if (m.hitRate != null) rows.push(summaryStat("Cache hit rate", `${m.hitRate.toFixed(1)}%`));
     rows.push(summaryStat("Total input", `${fmt(m.totalInput)} tok`));
     rows.push(summaryStat("Total output", `${fmt(m.output)} tok`));
     if (m.compactions > 0) rows.push(summaryStat("Compaction events", String(m.compactions), true));
     if (m.pressure > 0) rows.push(summaryStat("High context turns", String(m.pressure), true));
+
+    const topRoots = all
+      .filter((n) => (n.depth ?? 0) === 0 && (n.subtreeCost ?? 0) > 0)
+      .sort((a, b) => (b.subtreeCost ?? 0) - (a.subtreeCost ?? 0))
+      .slice(0, 5);
+
+    if (topRoots.length > 1) {
+      const topRows = topRoots.map((n, i) => {
+        const cost = fmtCost(n.subtreeCost ?? 0);
+        const text = truncate(humanText(n.token) || "(no prompt text)", 48);
+        return `<dt class="summary-dt" style="font-size:10px;opacity:0.7">${i + 1}. ${escHtml(cost)}</dt><dd class="summary-val" style="font-size:10px;text-align:right;opacity:0.85">${escHtml(text)}</dd>`;
+      });
+      return `<div id="summary-panel" class="summary-panel" style="display:none">
+  <div class="summary-panel-title">Session Summary <button class="summary-close" onclick="toggleSummary()">&#x2715;</button></div>
+  <dl class="summary-dl">
+    ${rows.join("\n    ")}
+  </dl>
+  <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px">
+    <div style="color:var(--text-dim);font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:6px">Top prompts by cost</div>
+    <dl class="summary-dl">${topRows.join("\n")}</dl>
+  </div>
+</div>`;
+    }
 
     return `<div id="summary-panel" class="summary-panel" style="display:none">
   <div class="summary-panel-title">Session Summary <button class="summary-close" onclick="toggleSummary()">&#x2715;</button></div>
@@ -657,7 +679,7 @@ function truncate(str: string, len: number): string {
   return str.length > len ? `${str.slice(0, len)}\u2026` : str;
 }
 
-function summaryStat(label: string, value: string, warn = false): string {
-  const valClass = warn ? "summary-val summary-warn" : "summary-val";
+function summaryStat(label: string, value: string, warn = false, highlight = false): string {
+  const valClass = warn ? "summary-val summary-warn" : highlight ? "summary-val summary-val-highlight" : "summary-val";
   return `<dt class="summary-dt">${escHtml(label)}</dt><dd class="${valClass}">${escHtml(value)}</dd>`;
 }
