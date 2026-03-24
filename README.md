@@ -9,11 +9,7 @@
 
 Flame graphs for [Claude Code](https://claude.ai/code) token usage, grounded in a per-prompt heatmap colored by token count or estimated cost.
 
-**Heatmap by tokens**:
-![Heatmap overview](docs/screenshot-heatmap.png)
-
-**Flamegraph for a single prompt:**
-![Flame graph](docs/screenshot-flame.png)
+![Demo](docs/token-lens.gif)
 
 ## Install
 
