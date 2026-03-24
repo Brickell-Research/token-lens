@@ -20,12 +20,14 @@ brew install token-lens
 
 ## Usage
 
-Render your most recent Claude Code session:
+Render a Claude Code session:
 
 ```sh
 token-lens render
 open flame.html
 ```
+
+If you have multiple sessions, `render` shows an interactive picker. With only one session it auto-selects it.
 
 Record a bounded window while you work:
 
