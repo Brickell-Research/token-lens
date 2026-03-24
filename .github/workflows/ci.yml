@@ -17,30 +17,99 @@ jobs:
       - run: bun install
       - run: bun run typecheck
       - run: bun run lint:check
-      - run: bun run test
+      - run: bun test
       - run: bun run build
 
   release:
     needs: test
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
       - run: bun install
-      - name: Build binaries
+
+      - name: Extract version
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Build tarballs
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
           mkdir -p dist
-          bun build --compile --minify --target=bun-linux-x64 src/index.ts --outfile dist/token-lens-linux-x64
-          bun build --compile --minify --target=bun-darwin-arm64 src/index.ts --outfile dist/token-lens-darwin-arm64
-          bun build --compile --minify --target=bun-darwin-x64 src/index.ts --outfile dist/token-lens-darwin-x64
-          bun build --compile --minify --target=bun-windows-x64 src/index.ts --outfile dist/token-lens-windows-x64.exe
-      - uses: softprops/action-gh-release@v2
+
+          bun build --compile --minify --target=bun-darwin-arm64 src/index.ts --outfile dist/token-lens
+          tar -czf dist/token-lens-${VERSION}-macos-arm64.tar.gz -C dist token-lens
+
+          bun build --compile --minify --target=bun-darwin-x64 src/index.ts --outfile dist/token-lens
+          tar -czf dist/token-lens-${VERSION}-macos-x64.tar.gz -C dist token-lens
+
+          bun build --compile --minify --target=bun-linux-x64 src/index.ts --outfile dist/token-lens
+          tar -czf dist/token-lens-${VERSION}-linux-x64.tar.gz -C dist token-lens
+
+          rm dist/token-lens
+
+      - name: Compute SHA256
+        id: sha
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          echo "macos_arm64=$(sha256sum dist/token-lens-${VERSION}-macos-arm64.tar.gz | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+          echo "macos_x64=$(sha256sum dist/token-lens-${VERSION}-macos-x64.tar.gz | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+          echo "linux_x64=$(sha256sum dist/token-lens-${VERSION}-linux-x64.tar.gz | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
         with:
           files: |
-            dist/token-lens-linux-x64
-            dist/token-lens-darwin-arm64
-            dist/token-lens-darwin-x64
-            dist/token-lens-windows-x64.exe
+            dist/token-lens-${{ steps.version.outputs.version }}-macos-arm64.tar.gz
+            dist/token-lens-${{ steps.version.outputs.version }}-macos-x64.tar.gz
+            dist/token-lens-${{ steps.version.outputs.version }}-linux-x64.tar.gz
+
+      - name: Update homebrew formula
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          SHA_MACOS_ARM64: ${{ steps.sha.outputs.macos_arm64 }}
+          SHA_MACOS_X64: ${{ steps.sha.outputs.macos_x64 }}
+          SHA_LINUX_X64: ${{ steps.sha.outputs.linux_x64 }}
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          git clone https://x-access-token:${GH_TOKEN}@github.com/Brickell-Research/homebrew-caffeine.git tap
+          cat > tap/Formula/token-lens.rb << EOF
+          class TokenLens < Formula
+            desc "Flame graphs for Claude Code token usage"
+            homepage "https://github.com/Brickell-Research/token-lens"
+            license "MIT"
+            version "${VERSION}"
+
+            if OS.mac? && Hardware::CPU.arm?
+              url "https://github.com/Brickell-Research/token-lens/releases/download/v${VERSION}/token-lens-${VERSION}-macos-arm64.tar.gz"
+              sha256 "${SHA_MACOS_ARM64}"
+            elsif OS.mac? && Hardware::CPU.intel?
+              url "https://github.com/Brickell-Research/token-lens/releases/download/v${VERSION}/token-lens-${VERSION}-macos-x64.tar.gz"
+              sha256 "${SHA_MACOS_X64}"
+            elsif OS.linux? && Hardware::CPU.intel?
+              url "https://github.com/Brickell-Research/token-lens/releases/download/v${VERSION}/token-lens-${VERSION}-linux-x64.tar.gz"
+              sha256 "${SHA_LINUX_X64}"
+            end
+
+            def install
+              bin.install "token-lens"
+            end
+
+            test do
+              system "#{bin}/token-lens", "--version"
+            end
+          end
+          EOF
+          cd tap
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/token-lens.rb
+          git commit -m "chore: bump token-lens to v${VERSION}"
+          git push
