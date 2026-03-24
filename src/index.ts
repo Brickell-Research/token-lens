@@ -7,7 +7,7 @@ const program = new Command();
 program
   .name("token-lens")
   .description("Flame graphs for Claude Code token usage")
-  .version("0.5.0");
+  .version("0.6.0");
 
 program
   .command("record")
@@ -15,7 +15,7 @@ program
   .option("--duration-in-seconds <n>", "Seconds to record", "30")
   .option(
     "--project-dir <path>",
-    "Working directory of the Claude Code session to record"
+    "Working directory of the Claude Code session to record",
   )
   .option("--output <path>", "Save path for the capture")
   .action(async (opts) => {
