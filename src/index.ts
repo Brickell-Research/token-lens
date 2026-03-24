@@ -4,13 +4,19 @@ import { record } from "./commands/record";
 import { render } from "./commands/render";
 
 const program = new Command();
-program.name("token-lens").description("Flame graphs for Claude Code token usage").version("0.7.0");
+program
+  .name("token-lens")
+  .description("Flame graphs for Claude Code token usage")
+  .version("0.9.0");
 
 program
   .command("record")
   .description("Tail the active session and auto-save a capture file")
   .option("--duration-in-seconds <n>", "Seconds to record", "30")
-  .option("--project-dir <path>", "Working directory of the Claude Code session to record")
+  .option(
+    "--project-dir <path>",
+    "Working directory of the Claude Code session to record",
+  )
   .option("--output <path>", "Save path for the capture")
   .action(async (opts) => {
     await record({
