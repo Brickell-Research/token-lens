@@ -181,56 +181,67 @@ module TokenLens
         chars / 4
       end
 
-      def summary_text(all)
-        assistant_nodes = all.select { |n| n[:token].role == "assistant" }
-        prompts = all.count { |n| n[:token].is_human_prompt? && !n[:token].is_task_notification? }
-        tasks = all.count { |n| n[:token].is_task_notification? }
-        turns = assistant_nodes.count { |n| !n[:token].is_sidechain }
-        sub = assistant_nodes.count { |n| n[:token].is_sidechain }
-        marginal = assistant_nodes.sum { |n| n[:token].marginal_input_tokens }
-        cached = assistant_nodes.sum { |n| n[:token].cache_read_tokens }
-        cache_new = assistant_nodes.sum { |n| n[:token].cache_creation_tokens }
-        raw_input = assistant_nodes.sum { |n| n[:token].input_tokens }
-        output = assistant_nodes.sum { |n| n[:token].output_tokens }
-        total_cost = assistant_nodes.sum { |n| n[:token].cost_usd }
+      def compute_session_metrics(all)
+        anodes = all.select { |n| n[:token].role == "assistant" }
+        raw_input = anodes.sum { |n| n[:token].input_tokens }
+        cached = anodes.sum { |n| n[:token].cache_read_tokens }
+        cache_new = anodes.sum { |n| n[:token].cache_creation_tokens }
         total_input = raw_input + cached + cache_new
-        hit_rate = (total_input > 0 && cached > 0) ? (cached.to_f / total_input * 100).round(0).to_i : nil
-        parts = []
+        {
+          assistant_nodes: anodes,
+          prompts: all.count { |n| n[:token].is_human_prompt? && !n[:token].is_task_notification? },
+          all_prompts: all.count { |n| n[:token].is_human_prompt? },
+          tasks: all.count { |n| n[:token].is_task_notification? },
+          turns: anodes.count { |n| !n[:token].is_sidechain },
+          sub: anodes.count { |n| n[:token].is_sidechain },
+          marginal: anodes.sum { |n| n[:token].marginal_input_tokens },
+          cached: cached,
+          cache_new: cache_new,
+          output: anodes.sum { |n| n[:token].output_tokens },
+          total_cost: anodes.sum { |n| n[:token].cost_usd },
+          total_input: total_input,
+          hit_rate: (total_input > 0 && cached > 0) ? (cached.to_f / total_input * 100) : nil,
+          compactions: all.count { |n| n[:token].is_human_prompt? && n[:token].human_text.start_with?("This session is being continued") },
+          pressure: anodes.count { |n| context_pressure?(n) },
+          models: anodes.map { |n| n[:token].model }.compact.map { |m| model_short(m) }.uniq.join(", ")
+        }
+      end
+
+      def compute_duration(all)
         timestamps = all.map { |n| n[:token].timestamp }.compact.sort
-        duration = begin
-          secs = (Time.parse(timestamps.last) - Time.parse(timestamps.first)).to_i
-          fmt_duration(secs) if timestamps.length >= 2 && secs > 0
-        rescue
-          nil
-        end
+        return nil unless timestamps.length >= 2
+        secs = (Time.parse(timestamps.last) - Time.parse(timestamps.first)).to_i
+        fmt_duration(secs) if secs > 0
+      rescue
+        nil
+      end
+
+      def summary_text(all)
+        m = compute_session_metrics(all)
+        parts = []
         parts << "#{@thread_count} threads" if @thread_count&.> 1
-        parts << "#{prompts} #{"prompt".then { |w| (prompts == 1) ? w : "#{w}s" }}"
-        parts << "#{tasks} #{"task callback".then { |w| (tasks == 1) ? w : "#{w}s" }}" if tasks > 0
-        parts << "#{turns} main #{"turn".then { |w| (turns == 1) ? w : "#{w}s" }}"
-        parts << "#{sub} subagent #{"turn".then { |w| (sub == 1) ? w : "#{w}s" }}" if sub > 0
-        parts << duration if duration
-        parts << "fresh input: #{fmt(marginal)}" if marginal > 0
-        parts << "cached input: #{fmt(cached)}" if cached > 0
-        parts << "written to cache: #{fmt(cache_new)}" if cache_new > 0
-        parts << "cache hit: #{hit_rate}%" if hit_rate
-        parts << "output: #{fmt(output)}" if output > 0
-        parts << fmt_cost(total_cost) if total_cost > 0
-        parts.join(" &middot; ")
+        parts << "#{m[:prompts]} #{"prompt".then { |w| (m[:prompts] == 1) ? w : "#{w}s" }}"
+        parts << "#{m[:tasks]} #{"task callback".then { |w| (m[:tasks] == 1) ? w : "#{w}s" }}" if m[:tasks] > 0
+        parts << "#{m[:turns]} main #{"turn".then { |w| (m[:turns] == 1) ? w : "#{w}s" }}"
+        parts << "#{m[:sub]} subagent #{"turn".then { |w| (m[:sub] == 1) ? w : "#{w}s" }}" if m[:sub] > 0
+        parts << compute_duration(all)
+        parts << "fresh input: #{fmt(m[:marginal])}" if m[:marginal] > 0
+        parts << "cached input: #{fmt(m[:cached])}" if m[:cached] > 0
+        parts << "written to cache: #{fmt(m[:cache_new])}" if m[:cache_new] > 0
+        parts << "cache hit: #{m[:hit_rate].round(0).to_i}%" if m[:hit_rate]
+        parts << "output: #{fmt(m[:output])}" if m[:output] > 0
+        parts << fmt_cost(m[:total_cost]) if m[:total_cost] > 0
+        parts.compact.join(" &middot; ")
       end
 
       def total_summary(all)
-        assistant_nodes = all.select { |n| n[:token].role == "assistant" }
-        marginal = assistant_nodes.sum { |n| n[:token].marginal_input_tokens }
-        cached = assistant_nodes.sum { |n| n[:token].cache_read_tokens }
-        cache_new = assistant_nodes.sum { |n| n[:token].cache_creation_tokens }
-        output = assistant_nodes.sum { |n| n[:token].output_tokens }
-        total_cost = assistant_nodes.sum { |n| n[:token].cost_usd }
+        m = compute_session_metrics(all)
         parts = []
-        parts << "fresh input: #{fmt(marginal)}" if marginal > 0
-        parts << "cached input: #{fmt(cached)}" if cached > 0
-        parts << "written to cache: #{fmt(cache_new)}" if cache_new > 0
-        parts << "output: #{fmt(output)}" if output > 0
-        parts << "cost: #{fmt_cost(total_cost)}" if total_cost > 0
+        parts << "fresh input: #{fmt(m[:marginal])}" if m[:marginal] > 0
+        parts << "cached input: #{fmt(m[:cached])}" if m[:cached] > 0
+        parts << "written to cache: #{fmt(m[:cache_new])}" if m[:cache_new] > 0
+        parts << "output: #{fmt(m[:output])}" if m[:output] > 0
+        parts << "cost: #{fmt_cost(m[:total_cost])}" if m[:total_cost] > 0
         parts.join(" | ")
       end
 
@@ -283,7 +294,7 @@ module TokenLens
         elsif t.role == "assistant" && t.tool_uses.any?
           uses = t.tool_uses
           tool_str = if uses.length == 1
-            brief = tool_brief(uses.first)
+            brief = tool_input(uses.first, format: :brief)
             brief.empty? ? uses.first["name"] : "#{uses.first["name"]}: #{brief}"
           else
             uses.map { |u| u["name"] }.join(", ")
@@ -317,7 +328,7 @@ module TokenLens
           parts << "written to cache: #{fmt(t.cache_creation_tokens)}" if t.cache_creation_tokens > 0
           parts << "output: #{fmt(t.output_tokens)}"
           parts << "cost: #{fmt_cost(t.cost_usd)}" if t.cost_usd > 0
-          t.tool_uses.each { |tool| parts << tool_detail(tool) unless tool_detail(tool).empty? }
+          t.tool_uses.each { |tool| parts << tool_input(tool, format: :detail) unless tool_input(tool, format: :detail).empty? }
           result_tok = tool_result_tokens(node)
           parts << "result: ~#{fmt(result_tok)} tokens" if result_tok > 0
           parts << "subagent" if t.is_sidechain
@@ -332,34 +343,24 @@ module TokenLens
         parts.join(" | ")
       end
 
-      def tool_brief(tool)
+      def tool_input(tool, format:)
         input = tool["input"] || {}
+        cmd = -> { (input["command"] || "").strip.sub(/\Asource[^\n&]+&&\s*rvm[^\n&]+&&\s*/, "") }
         case tool["name"]
         when "Bash"
-          (input["command"] || "").strip.sub(/\Asource[^\n&]+&&\s*rvm[^\n&]+&&\s*/, "")
+          (format == :brief) ? cmd.call : truncate(cmd.call, 100)
         when "Read", "Write", "Edit"
-          File.basename(input["file_path"].to_s)
-        when "Glob" then input["pattern"].to_s
-        when "Grep" then input["pattern"].to_s
-        when "Agent" then input["description"].to_s
-        when "WebSearch" then input["query"].to_s
-        when "WebFetch" then input["url"].to_s.split("/").last(2).join("/")
-        else ""
-        end
-      end
-
-      def tool_detail(tool)
-        input = tool["input"] || {}
-        case tool["name"]
-        when "Bash"
-          cmd = (input["command"] || "").strip.sub(/\Asource[^\n&]+&&\s*rvm[^\n&]+&&\s*/, "")
-          truncate(cmd, 100)
-        when "Read", "Write", "Edit" then input["file_path"].to_s
-        when "Glob" then "glob:#{input["pattern"]}"
-        when "Grep" then "grep:#{input["pattern"]}"
-        when "Agent" then truncate(input["prompt"].to_s, 100)
-        when "WebSearch" then "search:#{input["query"]}"
-        when "WebFetch" then input["url"].to_s
+          (format == :brief) ? File.basename(input["file_path"].to_s) : input["file_path"].to_s
+        when "Glob"
+          (format == :brief) ? input["pattern"].to_s : "glob:#{input["pattern"]}"
+        when "Grep"
+          (format == :brief) ? input["pattern"].to_s : "grep:#{input["pattern"]}"
+        when "Agent"
+          (format == :brief) ? input["description"].to_s : truncate(input["prompt"].to_s, 100)
+        when "WebSearch"
+          (format == :brief) ? input["query"].to_s : "search:#{input["query"]}"
+        when "WebFetch"
+          (format == :brief) ? input["url"].to_s.split("/").last(2).join("/") : input["url"].to_s
         else ""
         end
       end
@@ -376,46 +377,22 @@ module TokenLens
       end
 
       def session_summary_html(all)
-        assistant_nodes = all.select { |n| n[:token].role == "assistant" }
-        return "" if assistant_nodes.empty?
-
-        prompts = all.count { |n| n[:token].is_human_prompt? }
-        turns = assistant_nodes.count { |n| !n[:token].is_sidechain }
-        sub = assistant_nodes.count { |n| n[:token].is_sidechain }
-        raw_input = assistant_nodes.sum { |n| n[:token].input_tokens }
-        cached = assistant_nodes.sum { |n| n[:token].cache_read_tokens }
-        cache_new = assistant_nodes.sum { |n| n[:token].cache_creation_tokens }
-        output = assistant_nodes.sum { |n| n[:token].output_tokens }
-        total_input = raw_input + cached + cache_new
-        hit_rate = (total_input > 0 && cached > 0) ? (cached.to_f / total_input * 100).round(1) : nil
-        total_cost = assistant_nodes.sum { |n| n[:token].cost_usd }
-        compactions = all.count { |n| n[:token].is_human_prompt? && n[:token].human_text.start_with?("This session is being continued") }
-        pressure = assistant_nodes.count { |n| context_pressure?(n) }
-        models = assistant_nodes.map { |n| n[:token].model }.compact
-          .map { |m| model_short(m) }.uniq.join(", ")
-
-        timestamps = all.map { |n| n[:token].timestamp }.compact.sort
-        duration_str = if timestamps.length >= 2
-          begin
-            secs = (Time.parse(timestamps.last) - Time.parse(timestamps.first)).to_i
-            fmt_duration(secs)
-          rescue
-            nil
-          end
-        end
+        m = compute_session_metrics(all)
+        return "" if m[:assistant_nodes].empty?
+        duration_str = compute_duration(all)
 
         rows = []
-        rows << summary_stat("Prompts", prompts.to_s)
-        rows << summary_stat("Main turns", turns.to_s)
-        rows << summary_stat("Subagent turns", sub.to_s) if sub > 0
+        rows << summary_stat("Prompts", m[:all_prompts].to_s)
+        rows << summary_stat("Main turns", m[:turns].to_s)
+        rows << summary_stat("Subagent turns", m[:sub].to_s) if m[:sub] > 0
         rows << summary_stat("Duration", duration_str) if duration_str
-        rows << summary_stat("Models", models) unless models.empty?
-        rows << summary_stat("Total cost", fmt_cost(total_cost))
-        rows << summary_stat("Cache hit rate", "#{hit_rate}%") if hit_rate
-        rows << summary_stat("Total input", "#{fmt(total_input)} tok")
-        rows << summary_stat("Total output", "#{fmt(output)} tok")
-        rows << summary_stat("Compaction events", compactions.to_s, warn: true) if compactions > 0
-        rows << summary_stat("High context turns", pressure.to_s, warn: true) if pressure > 0
+        rows << summary_stat("Models", m[:models]) unless m[:models].empty?
+        rows << summary_stat("Total cost", fmt_cost(m[:total_cost]))
+        rows << summary_stat("Cache hit rate", "#{m[:hit_rate].round(1)}%") if m[:hit_rate]
+        rows << summary_stat("Total input", "#{fmt(m[:total_input])} tok")
+        rows << summary_stat("Total output", "#{fmt(m[:output])} tok")
+        rows << summary_stat("Compaction events", m[:compactions].to_s, warn: true) if m[:compactions] > 0
+        rows << summary_stat("High context turns", m[:pressure].to_s, warn: true) if m[:pressure] > 0
 
         <<~HTML
           <div id="summary-panel" class="summary-panel" style="display:none">
