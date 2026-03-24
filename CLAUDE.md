@@ -1,6 +1,6 @@
 # Ruby Setup
 
-Activate RVM before any commands: `source ~/.rvm/scripts/rvm && rvm use 3.4.1`
+Requires Ruby >= 3.2. If using RVM: `source ~/.rvm/scripts/rvm && rvm use $(cat .ruby-version 2>/dev/null || echo "default")`
 
 # Commands
 
