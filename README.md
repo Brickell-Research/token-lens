@@ -7,7 +7,7 @@
 [![Built with Bun](https://img.shields.io/badge/Built%20with-Bun-fbf0df?logo=bun)](https://bun.sh)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 
-Flame graphs for [Claude Code](https://claude.ai/code) token usage grounded in a per prompt heat map keyed on token count or estimated cost.
+Flame graphs for [Claude Code](https://claude.ai/code) token usage, grounded in a per-prompt heatmap colored by token count or estimated cost.
 
 **Heatmap by tokens**:
 ![Heatmap overview](docs/screenshot-heatmap.png)
