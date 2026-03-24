@@ -4,7 +4,10 @@ import { record } from "./commands/record";
 import { render } from "./commands/render";
 
 const program = new Command();
-program.name("token-lens").description("Flame graphs for Claude Code token usage").version("0.9.2");
+program
+  .name("token-lens")
+  .description("Flame graphs for Claude Code token usage")
+  .version("0.10.0");
 
 program
   .command("record")

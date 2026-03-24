@@ -99,6 +99,12 @@
     }
     if (wasZoomed) {
       if (wasZoomed.classList?.contains("hm-cell")) {
+        // ox/ow were stamped by zoomToRoot() inside unzoom() using the old costMode.
+        // Clear them so openPrompt → zoomToRoot re-computes with the new costMode.
+        bars().forEach((b) => {
+          b.removeAttribute("ox");
+          b.removeAttribute("ow");
+        });
         openPrompt(+wasZoomed.getAttribute("data-idx"));
       } else if (hmActiveIdx >= 0) {
         // ox/ow were set by zoomToRoot() inside unzoom() using the old costMode.
