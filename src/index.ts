@@ -4,7 +4,7 @@ import { record } from "./commands/record";
 import { render } from "./commands/render";
 
 const program = new Command();
-program.name("token-lens").description("Flame graphs for Claude Code token usage").version("0.9.0");
+program.name("token-lens").description("Flame graphs for Claude Code token usage").version("0.9.1");
 
 program
   .command("record")
@@ -14,7 +14,16 @@ program
   .option("--output <path>", "Save path for the capture")
   .action(async (opts) => {
     await record({
-      durationInSeconds: opts.durationInSeconds ? parseInt(opts.durationInSeconds, 10) : undefined,
+      durationInSeconds: opts.durationInSeconds
+        ? (() => {
+            const n = parseInt(opts.durationInSeconds, 10);
+            if (Number.isNaN(n)) {
+              process.stderr.write("Error: --duration-in-seconds must be a number\n");
+              process.exit(1);
+            }
+            return n;
+          })()
+        : undefined,
       projectDir: opts.projectDir,
       output: opts.output,
     });

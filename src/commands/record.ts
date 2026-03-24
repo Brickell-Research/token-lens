@@ -1,6 +1,6 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { activeJsonl, activeOrLatestJsonl, tailFile } from "../session";
 import type { RawEvent } from "../types";
 
@@ -14,6 +14,7 @@ export async function record(opts: RecordOptions): Promise<void> {
   const sessionsDir = join(homedir(), ".token-lens", "sessions");
   const outputPath = opts.output ?? join(sessionsDir, `${Date.now()}.json`);
   mkdirSync(sessionsDir, { recursive: true });
+  mkdirSync(dirname(outputPath), { recursive: true });
 
   const events: RawEvent[] = [];
   const jsonlPath = opts.projectDir ? activeJsonl(opts.projectDir) : activeOrLatestJsonl();

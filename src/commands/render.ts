@@ -13,6 +13,15 @@ export interface RenderOptions {
 }
 
 export async function render(opts: RenderOptions): Promise<void> {
+  try {
+    return await _render(opts);
+  } catch (e) {
+    process.stderr.write(`Error: ${e instanceof Error ? e.message : String(e)}\n`);
+    process.exit(1);
+  }
+}
+
+async function _render(opts: RenderOptions): Promise<void> {
   let filePath = opts.filePath;
   if (!filePath) {
     const sessionsDir = join(homedir(), ".token-lens", "sessions");
