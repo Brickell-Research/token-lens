@@ -9,6 +9,9 @@
 
 Flame graphs for [Claude Code](https://claude.ai/code) token usage.
 
+![Heatmap overview](docs/screenshot-heatmap.png)
+![Flame graph](docs/screenshot-flame.png)
+
 ## Install
 
 ```sh
