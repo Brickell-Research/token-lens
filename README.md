@@ -2,6 +2,10 @@
 
 [![CI](https://github.com/Brickell-Research/token-lens/actions/workflows/ci.yml/badge.svg)](https://github.com/Brickell-Research/token-lens/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![GitHub release](https://img.shields.io/github/v/release/Brickell-Research/token-lens)](https://github.com/Brickell-Research/token-lens/releases/latest)
+[![GitHub downloads](https://img.shields.io/github/downloads/Brickell-Research/token-lens/total)](https://github.com/Brickell-Research/token-lens/releases)
+[![Built with Bun](https://img.shields.io/badge/Built%20with-Bun-fbf0df?logo=bun)](https://bun.sh)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 
 Flame graphs for [Claude Code](https://claude.ai/code) token usage.
 
