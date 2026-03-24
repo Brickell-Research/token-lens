@@ -100,6 +100,18 @@
     if (wasZoomed) {
       if (wasZoomed.classList?.contains("hm-cell")) {
         openPrompt(+wasZoomed.getAttribute("data-idx"));
+      } else if (hmActiveIdx >= 0) {
+        // ox/ow were set by zoomToRoot() inside unzoom() using the old costMode.
+        // Clear them so zoomToRoot + zoom below re-compute with the new costMode.
+        bars().forEach((b) => {
+          b.removeAttribute("ox");
+          b.removeAttribute("ow");
+        });
+        const rootCell = document.querySelector(`.hm-cell[data-idx="${hmActiveIdx}"]`);
+        withoutTransition(() => {
+          if (rootCell) zoomToRoot(rootCell);
+          zoom(wasZoomed);
+        });
       } else {
         zoom(wasZoomed);
       }

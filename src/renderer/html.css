@@ -55,7 +55,7 @@ body {
   flex-direction: column;
   height: 100%;
   color: var(--text);
-  padding-bottom: 29px;
+  padding-bottom: 42px;
 }
 .header {
   display: flex;
@@ -260,12 +260,13 @@ body {
   display: none;
 }
 .heatmap.hm-strip .hm-grid {
-  gap: 2px;
+  display: none;
 }
 .heatmap.hm-strip .hm-cell {
   width: 16px;
   height: 16px;
   border-radius: 2px;
+  pointer-events: none;
 }
 .hm-back {
   padding: 4px 12px;
@@ -405,23 +406,14 @@ body {
   z-index: 100;
   padding: 6px 12px;
   font-size: 11px;
-  height: 29px;
+  height: 42px;
   display: flex;
   align-items: baseline;
-  flex-wrap: nowrap;
+  align-content: flex-start;
+  flex-wrap: wrap;
   gap: 0;
   border-top: 1px solid var(--border);
   background: var(--bg);
-  overflow: hidden;
-}
-.tip-sep,
-.tip-tokens,
-.tip-model,
-.tip-label,
-.tip-code,
-.tip-warn {
-  flex-shrink: 0;
-  white-space: nowrap;
 }
 .tip-sep {
   color: var(--border);

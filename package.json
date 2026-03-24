@@ -1,6 +1,6 @@
 {
   "name": "token-lens",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "description": "Flame graphs for Claude Code token usage",
   "type": "module",
   "bin": {
