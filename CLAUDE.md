@@ -12,7 +12,8 @@ Requires [Bun](https://bun.sh). Install deps: `bun install`
 
 # Architecture
 
-- New CLI commands go in `src/commands/` as a class
+- New CLI commands go in `src/commands/` as plain async functions
 - Register them in `src/index.ts` via Commander `.command()`
 - Tests mirror src structure: `src/foo.ts` → `src/foo.test.ts`
-- Renderer pipeline: `Parser` → `Reshaper` → sort → `annotate` → `layout` → `Html`
+- Renderer pipeline: `parse` → `reshape` → sort → `layout` (annotates + lays out) → `Html`
+- Static assets (`html.css`, `html-client.js`) are embedded at build time via `import ... with { type: "text" }`

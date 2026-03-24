@@ -96,7 +96,10 @@ describe("Reshaper", () => {
   describe("streaming chain collapse", () => {
     it("collapses thinking->text->tool_use chains with identical input usage", () => {
       const mkA = (output: number, child?: Node) =>
-        mkNode(makeToken({ role: "assistant", input: 100, output, cacheCreation: 200 }), child ? [child] : []);
+        mkNode(
+          makeToken({ role: "assistant", input: 100, output, cacheCreation: 200 }),
+          child ? [child] : [],
+        );
       const toolUse = mkA(500);
       const thinking = mkA(8, mkA(8, toolUse));
       const result = reshape([mkNode(makeToken({ role: "user", text: "go" }), [thinking])]);

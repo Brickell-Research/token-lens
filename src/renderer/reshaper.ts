@@ -76,7 +76,12 @@ function processRoot(node: Node, pending: Node[]): Node[] {
 // assistant is a genuine new conversational turn and gets hoisted.
 // ---------------------------------------------------------------------------
 
-function flattenThread(nodes: Node[], prevInput: number, throughAssistant: boolean, pending: Node[]): Node[] {
+function flattenThread(
+  nodes: Node[],
+  prevInput: number,
+  throughAssistant: boolean,
+  pending: Node[],
+): Node[] {
   return nodes.flatMap((node) => {
     const t = node.token;
 

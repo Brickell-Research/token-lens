@@ -131,15 +131,28 @@ describe("withToken", () => {
 describe("costUsd", () => {
   it("computes cost using marginal input, cache reads, cache creation, and output", () => {
     // fallback sonnet-4 rates: input $3/MTok
-    expect(Math.abs(costUsd(makeZeroCostToken({ marginalInputTokens: 1_000_000 })) - 3.0)).toBeLessThan(0.000001);
+    expect(
+      Math.abs(costUsd(makeZeroCostToken({ marginalInputTokens: 1_000_000 })) - 3.0),
+    ).toBeLessThan(0.000001);
   });
 
   it("uses model-specific pricing for opus-4-6", () => {
-    expect(Math.abs(costUsd(makeZeroCostToken({ model: "claude-opus-4-6", marginalInputTokens: 1_000_000 })) - 5.0)).toBeLessThan(0.000001);
+    expect(
+      Math.abs(
+        costUsd(makeZeroCostToken({ model: "claude-opus-4-6", marginalInputTokens: 1_000_000 })) -
+          5.0,
+      ),
+    ).toBeLessThan(0.000001);
   });
 
   it("uses model-specific pricing for haiku-4-5", () => {
-    expect(Math.abs(costUsd(makeZeroCostToken({ model: "claude-haiku-4-5-20251001", marginalInputTokens: 1_000_000 })) - 1.0)).toBeLessThan(0.000001);
+    expect(
+      Math.abs(
+        costUsd(
+          makeZeroCostToken({ model: "claude-haiku-4-5-20251001", marginalInputTokens: 1_000_000 }),
+        ) - 1.0,
+      ),
+    ).toBeLessThan(0.000001);
   });
 
   it("returns 0 for a token with all zero counts", () => {
