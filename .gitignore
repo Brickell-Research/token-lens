@@ -16,6 +16,8 @@ dist/
 # TypeScript build artifacts
 src/**/*.js.map
 src/**/*.d.ts
+!src/renderer/html.css.d.ts
+!src/renderer/assets.d.ts
 
 # Bundler / Ruby
 .bundle/

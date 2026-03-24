@@ -5,7 +5,8 @@
     "strict": true,
     "noEmit": true,
     "types": ["bun-types"],
-    "noUncheckedIndexedAccess": false
+    "noUncheckedIndexedAccess": false,
+    "allowArbitraryExtensions": true
   },
   "include": ["src"]
 }
