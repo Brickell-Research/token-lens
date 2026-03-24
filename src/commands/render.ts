@@ -34,6 +34,11 @@ export async function render(opts: RenderOptions): Promise<void> {
   process.stderr.write(`Rendering ${filePath}\n`);
   const tree = parse(filePath);
   const reshapedTree = reshape(tree);
+  if (reshapedTree.length === 0) {
+    process.stderr.write(
+      `Warning: no conversation turns found in ${filePath} — output will be empty.\n`,
+    );
+  }
   reshapedTree.sort((a, b) => (a.token.timestamp ?? "").localeCompare(b.token.timestamp ?? ""));
   annotate(reshapedTree);
   const canvasWidth = layout(reshapedTree);
