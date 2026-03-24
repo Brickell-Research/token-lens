@@ -37,32 +37,27 @@ export interface Token {
 export interface Node {
   token: Token;
   children: Node[];
-  // Annotator stage
-  depth?: number;
+  depth?: number; // annotator
   subtreeTokens?: number;
   subtreeCost?: number;
-  // Layout stage
-  x?: number;
+  x?: number; // layout
   y?: number;
   w?: number;
   costX?: number;
   costW?: number;
-  // Html renderer
-  alt?: boolean;
-}
-
-export interface RawUsage {
-  input_tokens?: number;
-  output_tokens?: number;
-  cache_read_input_tokens?: number;
-  cache_creation_input_tokens?: number;
+  alt?: boolean; // html renderer
 }
 
 export interface RawMessage {
   role?: string;
   model?: string;
   content?: unknown;
-  usage?: RawUsage;
+  usage?: {
+    input_tokens?: number;
+    output_tokens?: number;
+    cache_read_input_tokens?: number;
+    cache_creation_input_tokens?: number;
+  };
 }
 
 export interface RawEvent {

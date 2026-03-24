@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { costUsd } from "../token";
 import type { Node, Token } from "../types";
-import { annotate } from "./annotator";
+import { annotate } from "./layout";
 
 function makeToken(overrides: Partial<Token> = {}): Token {
   return {

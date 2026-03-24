@@ -1,4 +1,4 @@
-import { existsSync, openSync, readdirSync, readSync, statSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import type { RawEvent } from "./types";
@@ -11,37 +11,22 @@ export function encodedCwd(dir?: string): string {
 
 export function activeJsonl(dir?: string): string {
   const projectDir = join(CLAUDE_DIR, encodedCwd(dir));
-  if (!existsSync(projectDir)) {
-    throw new Error(`No session files found for ${dir ?? process.cwd()}`);
-  }
-  const files = readdirSync(projectDir)
-    .filter((f) => f.endsWith(".jsonl"))
-    .map((f) => ({ path: join(projectDir, f), mtime: statSync(join(projectDir, f)).mtimeMs }))
-    .sort((a, b) => b.mtime - a.mtime);
-  if (files.length === 0) {
-    throw new Error(`No session files found for ${dir ?? process.cwd()}`);
-  }
+  const files = existsSync(projectDir)
+    ? Array.from(new Bun.Glob("*.jsonl").scanSync(projectDir))
+        .map((f) => ({ path: join(projectDir, f), mtime: statSync(join(projectDir, f)).mtimeMs }))
+        .sort((a, b) => b.mtime - a.mtime)
+    : [];
+  if (!files.length) throw new Error(`No session files found for ${dir ?? process.cwd()}`);
   return files[0].path;
 }
 
 export function latestJsonl(): string {
-  if (!existsSync(CLAUDE_DIR)) {
-    throw new Error(`No session files found in ${CLAUDE_DIR}`);
-  }
-  const files: { path: string; mtime: number }[] = [];
-  for (const entry of readdirSync(CLAUDE_DIR)) {
-    const subdir = join(CLAUDE_DIR, entry);
-    if (!statSync(subdir).isDirectory()) continue;
-    for (const file of readdirSync(subdir)) {
-      if (!file.endsWith(".jsonl")) continue;
-      const fullPath = join(subdir, file);
-      files.push({ path: fullPath, mtime: statSync(fullPath).mtimeMs });
-    }
-  }
-  if (files.length === 0) {
-    throw new Error(`No session files found in ${CLAUDE_DIR}`);
-  }
-  files.sort((a, b) => b.mtime - a.mtime);
+  const files = existsSync(CLAUDE_DIR)
+    ? Array.from(new Bun.Glob("**/*.jsonl").scanSync(CLAUDE_DIR))
+        .map((f) => ({ path: join(CLAUDE_DIR, f), mtime: statSync(join(CLAUDE_DIR, f)).mtimeMs }))
+        .sort((a, b) => b.mtime - a.mtime)
+    : [];
+  if (!files.length) throw new Error(`No session files found in ${CLAUDE_DIR}`);
   return files[0].path;
 }
 
@@ -58,48 +43,34 @@ export function activeOrLatestJsonl(dir?: string): string {
 }
 
 export function tailFile(path: string, onLine: (event: RawEvent) => void): () => void {
-  let lastPos = Bun.file(path).size;
+  let pos = Bun.file(path).size;
   let stopped = false;
-
-  const fd = openSync(path, "r");
-  const buf = Buffer.allocUnsafe(65536);
+  let partial = "";
 
   function poll() {
     if (stopped) return;
-    const currentSize = Bun.file(path).size;
-    if (currentSize > lastPos) {
-      let pos = lastPos;
-      let partial = "";
-      while (pos < currentSize) {
-        const bytesToRead = Math.min(buf.byteLength, currentSize - pos);
-        const bytesRead = readSync(fd, buf, 0, bytesToRead, pos);
-        if (bytesRead === 0) break;
-        pos += bytesRead;
-        partial += buf.toString("utf8", 0, bytesRead);
-      }
-      lastPos = pos;
-      const lines = partial.split("\n");
-      for (let i = 0; i < lines.length - 1; i++) {
-        const line = lines[i].trim();
-        if (line.length === 0) continue;
-        try {
-          onLine(JSON.parse(line) as RawEvent);
-        } catch {
-          // skip malformed lines
+    const size = Bun.file(path).size;
+    if (size > pos) {
+      const chunk = Bun.file(path).slice(pos, size);
+      pos = size;
+      void chunk.text().then((text) => {
+        partial += text;
+        const lines = partial.split("\n");
+        partial = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            onLine(JSON.parse(line) as RawEvent);
+          } catch {}
         }
-      }
-      // last element may be an incomplete line — discard (it will be re-read next poll)
-      // but since we already advanced lastPos, we need to rewind by the leftover bytes
-      const leftover = lines[lines.length - 1];
-      if (leftover.length > 0) {
-        lastPos -= Buffer.byteLength(leftover, "utf8");
-      }
+        setTimeout(poll, 100);
+      });
+      return;
     }
     setTimeout(poll, 100);
   }
 
   poll();
-
   return () => {
     stopped = true;
   };

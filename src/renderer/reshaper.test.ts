@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { humanText, isHumanPrompt } from "../token";
 import type { Node, Token } from "../types";
-import { Reshaper } from "./reshaper";
+import { reshape } from "./reshaper";
 
 function makeToken(opts: {
   role: string;
@@ -52,10 +52,7 @@ describe("Reshaper", () => {
       const toolResult = mkNode(makeToken({ role: "user", toolResult: true }), [a2]);
       const a1 = mkNode(makeToken({ role: "assistant", input: 100, output: 30 }), [toolResult]);
       const prompt = mkNode(makeToken({ role: "user", text: "do something" }), [a1]);
-
-      const reshaper = new Reshaper();
-      const result = reshaper.reshape([prompt]);
-
+      const result = reshape([prompt]);
       expect(result.length).toBe(1);
       expect(isHumanPrompt(result[0].token)).toBe(true);
       expect(result[0].children.length).toBe(2);
@@ -67,11 +64,7 @@ describe("Reshaper", () => {
       const toolResult = mkNode(makeToken({ role: "user", toolResult: true }), [a2]);
       const a1 = mkNode(makeToken({ role: "assistant", input: 100, output: 30 }), [toolResult]);
       const prompt = mkNode(makeToken({ role: "user", text: "go" }), [a1]);
-
-      const reshaper = new Reshaper();
-      const result = reshaper.reshape([prompt]);
-      const siblings = result[0].children;
-
+      const siblings = reshape([prompt])[0].children;
       expect(siblings[0].token.marginalInputTokens).toBe(100); // 100 - 0
       expect(siblings[1].token.marginalInputTokens).toBe(200); // 300 - 100
     });
@@ -81,10 +74,7 @@ describe("Reshaper", () => {
       const p2 = mkNode(makeToken({ role: "user", text: "follow-up" }), [a2]);
       const a1 = mkNode(makeToken({ role: "assistant", input: 100 }), [p2]);
       const p1 = mkNode(makeToken({ role: "user", text: "initial" }), [a1]);
-
-      const reshaper = new Reshaper();
-      const result = reshaper.reshape([p1]);
-
+      const result = reshape([p1]);
       expect(result.length).toBe(2);
       expect(humanText(result[0].token)).toBe("initial");
       expect(result[0].children.map((c) => c.token.role)).toEqual(["assistant"]);
@@ -97,10 +87,7 @@ describe("Reshaper", () => {
       const a2 = mkNode(makeToken({ role: "assistant", input: 200 }));
       const p1 = mkNode(makeToken({ role: "user", text: "prompt one" }), [a1]);
       const p2 = mkNode(makeToken({ role: "user", text: "prompt two" }), [a2]);
-
-      const reshaper = new Reshaper();
-      const result = reshaper.reshape([p1, p2]);
-
+      const result = reshape([p1, p2]);
       expect(result.length).toBe(2);
       expect(result.map((r) => humanText(r.token))).toEqual(["prompt one", "prompt two"]);
     });
@@ -108,38 +95,12 @@ describe("Reshaper", () => {
 
   describe("streaming chain collapse", () => {
     it("collapses thinking->text->tool_use chains with identical input usage", () => {
-      const toolUse = mkNode(
-        makeToken({
-          role: "assistant",
-          input: 100,
-          output: 500,
-          cacheCreation: 200,
-        }),
-      );
-      const text = mkNode(
-        makeToken({
-          role: "assistant",
-          input: 100,
-          output: 8,
-          cacheCreation: 200,
-        }),
-        [toolUse],
-      );
-      const thinking = mkNode(
-        makeToken({
-          role: "assistant",
-          input: 100,
-          output: 8,
-          cacheCreation: 200,
-        }),
-        [text],
-      );
-      const prompt = mkNode(makeToken({ role: "user", text: "go" }), [thinking]);
-
-      const reshaper = new Reshaper();
-      const result = reshaper.reshape([prompt]);
+      const mkA = (output: number, child?: Node) =>
+        mkNode(makeToken({ role: "assistant", input: 100, output, cacheCreation: 200 }), child ? [child] : []);
+      const toolUse = mkA(500);
+      const thinking = mkA(8, mkA(8, toolUse));
+      const result = reshape([mkNode(makeToken({ role: "user", text: "go" }), [thinking])]);
       const siblings = result[0].children;
-
       expect(siblings.length).toBe(1);
       expect(siblings[0].token.outputTokens).toBe(500);
     });
@@ -150,11 +111,7 @@ describe("Reshaper", () => {
       const sidechain = mkNode(makeToken({ role: "assistant", input: 50, isSidechain: true }));
       const a1 = mkNode(makeToken({ role: "assistant", input: 100 }), [sidechain]);
       const prompt = mkNode(makeToken({ role: "user", text: "go" }), [a1]);
-
-      const reshaper = new Reshaper();
-      const result = reshaper.reshape([prompt]);
-      const assistant = result[0].children[0];
-
+      const assistant = reshape([prompt])[0].children[0];
       expect(assistant.children.length).toBe(1);
       expect(assistant.children[0].token.isSidechain).toBe(true);
     });

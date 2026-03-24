@@ -1,17 +1,7 @@
-// Matches Ruby's escape_html (no apostrophe encoding)
-function escHtml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
-import { readFileSync } from "node:fs";
-import { basename, dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { basename } from "node:path";
 import {
   costUsd,
+  flattenNodes,
   humanText,
   isHumanPrompt,
   isTaskNotification,
@@ -20,11 +10,16 @@ import {
   toolUses,
 } from "../token";
 import type { ContentBlock, Node } from "../types";
+import htmlCss from "./html.css" with { type: "text" };
+import htmlJs from "./html-client.js" with { type: "text" };
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-
-function readAsset(name: string): string {
-  return readFileSync(join(__dirname, name), "utf-8");
+// Matches Ruby's escape_html (no apostrophe encoding)
+function escHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 const ROW_HEIGHT = 32;
@@ -73,14 +68,27 @@ export class Html {
   }
 
   render(nodes: Node[]): string {
-    const allFlat = this.flatten(nodes);
+    const allFlat = flattenNodes(nodes);
     const all = allFlat.filter((n) => (n.w ?? 0) > 1);
     const maxDepth = all.reduce((max, n) => Math.max(max, n.depth ?? 0), 0);
     const flameHeight = (maxDepth + 2) * ROW_HEIGHT; // +1 for TOTAL bar at bottom
     const totalTop = (maxDepth + 1) * ROW_HEIGHT;
     const totalTokens = nodes.reduce((s, n) => s + (n.subtreeTokens ?? 0), 0);
     const totalCost = nodes.reduce((s, n) => s + (n.subtreeCost ?? 0), 0);
-    const totalTip = escapeJs(escHtml(this.totalSummary(allFlat)));
+    const totalTip = escapeJs(
+      escHtml(
+        (() => {
+          const m = this.computeSessionMetrics(allFlat);
+          const parts: string[] = [];
+          if (m.marginal > 0) parts.push(`fresh input: ${fmt(m.marginal)}`);
+          if (m.cached > 0) parts.push(`cached input: ${fmt(m.cached)}`);
+          if (m.cacheNew > 0) parts.push(`written to cache: ${fmt(m.cacheNew)}`);
+          if (m.output > 0) parts.push(`output: ${fmt(m.output)}`);
+          if (m.totalCost > 0) parts.push(`cost: ${fmtCost(m.totalCost)}`);
+          return parts.join(" | ");
+        })(),
+      ),
+    );
     this.rereadFiles = this.buildRereadMap(all);
     this.threadCount = nodes.length;
     this.threadNumbers = new Map();
@@ -101,8 +109,8 @@ export class Html {
     const tokenTotalLbl = `TOTAL &middot; ${fmt(totalTokens)} tokens`;
     const costTotalLbl = `TOTAL &middot; ${fmtCost(totalCost)}`;
 
-    const cssText = readAsset("html.css");
-    const jsText = this.js();
+    const cssText = htmlCss;
+    const jsText = `var W = ${this.canvasWidth}, MIN_LBL_PX = ${MIN_LABEL_PX}, hmCount = ${this.hmCount};\n${htmlJs}`;
 
     return `<!DOCTYPE html>
 <html data-theme="dark">
@@ -118,7 +126,7 @@ ${cssText}
 <div class="header">
   <div>
     <div class="summary">${this.summaryText(allFlat)}</div>
-    <div class="legend" id="legend" style="display:none">${this.legendHtml()}</div>
+    <div class="legend" id="legend" style="display:none">${LEGEND_ITEMS.map(([cssClass, lbl]) => `<span class="legend-item"><span class="legend-swatch ${cssClass}"></span>${lbl}</span>`).join("")}</div>
   </div>
   <div class="header-btns">
     <button class="theme-btn" id="theme-btn" onclick="toggleTheme()">&#x25D0; Light</button>
@@ -149,10 +157,6 @@ ${jsText}
   // Private helpers
   // ---------------------------------------------------------------------------
 
-  private flatten(nodes: Node[]): Node[] {
-    return nodes.flatMap((n) => [n, ...this.flatten(n.children)]);
-  }
-
   private pct(val: number): string {
     return ((val / this.canvasWidth) * 100.0).toFixed(4);
   }
@@ -160,7 +164,7 @@ ${jsText}
   private barHtml(node: Node): string {
     const t = node.token;
     const lbl = escHtml(this.label(node));
-    const clbl = this.costLabel(node);
+    const clbl = fmtCost(node.subtreeCost ?? 0);
     const tip = escHtml(this.tooltip(node));
     const left = this.pct(node.x ?? 0);
     const width = this.pct(node.w ?? 0);
@@ -338,43 +342,11 @@ ${jsText}
     return parts.filter(Boolean).join(" &middot; ");
   }
 
-  private totalSummary(all: Node[]): string {
-    const m = this.computeSessionMetrics(all);
-    const parts: string[] = [];
-    if (m.marginal > 0) parts.push(`fresh input: ${fmt(m.marginal)}`);
-    if (m.cached > 0) parts.push(`cached input: ${fmt(m.cached)}`);
-    if (m.cacheNew > 0) parts.push(`written to cache: ${fmt(m.cacheNew)}`);
-    if (m.output > 0) parts.push(`output: ${fmt(m.output)}`);
-    if (m.totalCost > 0) parts.push(`cost: ${fmtCost(m.totalCost)}`);
-    return parts.join(" | ");
-  }
-
-  private threadSeparators(all: Node[]): string {
-    const roots = all.filter((n) => n.depth === 0);
-    if (roots.length <= 1) return "";
-    // Emit a vertical line at the right edge of each thread (except the last)
-    return roots
-      .slice(0, -1)
-      .map((n) => {
-        const rightX = (n.x ?? 0) + (n.w ?? 0);
-        const pctVal = this.pct(rightX);
-        return `<div class="thread-sep" style="left:${pctVal}%"></div>`;
-      })
-      .join("\n");
-  }
-
   private assignAlternation(siblings: Node[]): void {
     siblings.forEach((node, i) => {
       node.alt = i % 2 === 1;
       this.assignAlternation(node.children);
     });
-  }
-
-  private legendHtml(): string {
-    return LEGEND_ITEMS.map(
-      ([cssClass, lbl]) =>
-        `<span class="legend-item"><span class="legend-swatch ${cssClass}"></span>${lbl}</span>`,
-    ).join("");
   }
 
   private colorClass(node: Node): string {
@@ -542,22 +514,15 @@ ${jsText}
 </div>`;
   }
 
-  private costLabel(node: Node): string {
-    return fmtCost(node.subtreeCost ?? 0);
-  }
-
-  private compactionNode(node: Node): boolean {
-    return (
-      isHumanPrompt(node.token) &&
-      humanText(node.token).startsWith("This session is being continued")
-    );
-  }
-
   private heatmapHtml(nodes: Node[]): string {
     // Merge each compaction node into the preceding group -- it's overhead from that prompt
     const groups: Node[][] = [];
     for (const node of nodes) {
-      if (this.compactionNode(node) && groups.length > 0) {
+      if (
+        isHumanPrompt(node.token) &&
+        humanText(node.token).startsWith("This session is being continued") &&
+        groups.length > 0
+      ) {
         groups[groups.length - 1].push(node);
       } else {
         groups.push([node]);
@@ -579,8 +544,8 @@ ${jsText}
         const combinedCost = groupCosts[i];
         const hasCompaction = group.length > 1;
 
-        const colorCost = heatmapColor(combinedCost, minCost, maxCost);
-        const colorToken = heatmapColorToken(combinedTokens, minTok, maxTok);
+        const colorCost = hmColor(combinedCost, minCost, maxCost, [32, 5, 16], [255, 20, 147]);
+        const colorToken = hmColor(combinedTokens, minTok, maxTok, [7, 48, 48], [0, 206, 209]);
 
         // x/w spans all nodes in the group
         const last = group[group.length - 1];
@@ -625,12 +590,6 @@ ${jsText}
   <div class="hm-empty" id="hm-empty">Click a prompt cell to explore its flame graph</div>
 </div>`;
   }
-
-  private js(): string {
-    const config = `var W = ${this.canvasWidth}, MIN_LBL_PX = ${MIN_LABEL_PX}, hmCount = ${this.hmCount};`;
-    const jsContent = readAsset("html.js");
-    return `${config}\n${jsContent}`;
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -645,22 +604,18 @@ function escapeJs(str: string): string {
     .replace(/\r/g, "\\r");
 }
 
-function heatmapColor(value: number, minVal: number, maxVal: number): string {
-  let t = maxVal === minVal ? 0.5 : (value - minVal) / (maxVal - minVal);
-  t = t ** 0.7;
-  const r = clamp(Math.round(32 + (255 - 32) * t), 0, 255);
-  const g = clamp(Math.round(5 + (20 - 5) * t), 0, 255);
-  const b = clamp(Math.round(16 + (147 - 16) * t), 0, 255);
-  return `#${hex(r)}${hex(g)}${hex(b)}`;
-}
-
-function heatmapColorToken(value: number, minVal: number, maxVal: number): string {
-  let t = maxVal === minVal ? 0.5 : (value - minVal) / (maxVal - minVal);
-  t = t ** 0.7;
-  const r = clamp(Math.round(7 + (0 - 7) * t), 0, 255);
-  const g = clamp(Math.round(48 + (206 - 48) * t), 0, 255);
-  const b = clamp(Math.round(48 + (209 - 48) * t), 0, 255);
-  return `#${hex(r)}${hex(g)}${hex(b)}`;
+function hmColor(
+  value: number,
+  minVal: number,
+  maxVal: number,
+  from: readonly [number, number, number],
+  to: readonly [number, number, number],
+): string {
+  const t = (maxVal === minVal ? 0.5 : (value - minVal) / (maxVal - minVal)) ** 0.7;
+  return (
+    "#" +
+    (from.map((f, i) => hex(clamp(Math.round(f + (to[i]! - f) * t), 0, 255))) as string[]).join("")
+  );
 }
 
 function clamp(value: number, lo: number, hi: number): number {

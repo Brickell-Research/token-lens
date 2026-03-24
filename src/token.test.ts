@@ -32,6 +32,21 @@ function makeRaw(overrides: Partial<RawEvent> = {}): RawEvent {
   };
 }
 
+function makeUserRaw(content: unknown[]): RawEvent {
+  return makeRaw({ type: "user", message: { role: "user", content } });
+}
+
+function makeZeroCostToken(overrides: Partial<Token> = {}): Token {
+  const base = createToken(makeRaw());
+  return withToken(base, {
+    marginalInputTokens: 0,
+    cacheReadTokens: 0,
+    cacheCreationTokens: 0,
+    outputTokens: 0,
+    ...overrides,
+  });
+}
+
 describe("createToken", () => {
   it("parses identifiers", () => {
     const token = createToken(makeRaw());
@@ -115,75 +130,31 @@ describe("withToken", () => {
 
 describe("costUsd", () => {
   it("computes cost using marginal input, cache reads, cache creation, and output", () => {
-    const token = createToken(makeRaw());
-    const t = withToken(token, {
-      marginalInputTokens: 1_000_000,
-      cacheReadTokens: 0,
-      cacheCreationTokens: 0,
-      outputTokens: 0,
-    });
     // fallback sonnet-4 rates: input $3/MTok
-    expect(Math.abs(costUsd(t) - 3.0)).toBeLessThan(0.000001);
+    expect(Math.abs(costUsd(makeZeroCostToken({ marginalInputTokens: 1_000_000 })) - 3.0)).toBeLessThan(0.000001);
   });
 
   it("uses model-specific pricing for opus-4-6", () => {
-    const token = createToken(makeRaw());
-    const t = withToken(token, {
-      model: "claude-opus-4-6",
-      marginalInputTokens: 1_000_000,
-      cacheReadTokens: 0,
-      cacheCreationTokens: 0,
-      outputTokens: 0,
-    });
-    expect(Math.abs(costUsd(t) - 5.0)).toBeLessThan(0.000001);
+    expect(Math.abs(costUsd(makeZeroCostToken({ model: "claude-opus-4-6", marginalInputTokens: 1_000_000 })) - 5.0)).toBeLessThan(0.000001);
   });
 
   it("uses model-specific pricing for haiku-4-5", () => {
-    const token = createToken(makeRaw());
-    const t = withToken(token, {
-      model: "claude-haiku-4-5-20251001",
-      marginalInputTokens: 1_000_000,
-      cacheReadTokens: 0,
-      cacheCreationTokens: 0,
-      outputTokens: 0,
-    });
-    expect(Math.abs(costUsd(t) - 1.0)).toBeLessThan(0.000001);
+    expect(Math.abs(costUsd(makeZeroCostToken({ model: "claude-haiku-4-5-20251001", marginalInputTokens: 1_000_000 })) - 1.0)).toBeLessThan(0.000001);
   });
 
   it("returns 0 for a token with all zero counts", () => {
-    const token = createToken(makeRaw());
-    const t = withToken(token, {
-      marginalInputTokens: 0,
-      cacheReadTokens: 0,
-      cacheCreationTokens: 0,
-      outputTokens: 0,
-    });
-    expect(costUsd(t)).toBe(0);
+    expect(costUsd(makeZeroCostToken())).toBe(0);
   });
 });
 
 describe("isHumanPrompt", () => {
   it("is true for user text messages", () => {
-    const raw = makeRaw({
-      type: "user",
-      message: {
-        role: "user",
-        content: [{ type: "text", text: "hello" }],
-      },
-    });
-    const token = createToken(raw);
+    const token = createToken(makeUserRaw([{ type: "text", text: "hello" }]));
     expect(isHumanPrompt(token)).toBe(true);
   });
 
   it("is false for user tool_result messages", () => {
-    const raw = makeRaw({
-      type: "user",
-      message: {
-        role: "user",
-        content: [{ type: "tool_result", text: "" }],
-      },
-    });
-    const token = createToken(raw);
+    const token = createToken(makeUserRaw([{ type: "tool_result", text: "" }]));
     expect(isHumanPrompt(token)).toBe(false);
   });
 
@@ -195,14 +166,7 @@ describe("isHumanPrompt", () => {
 
 describe("humanText", () => {
   it("returns the text content of a human message", () => {
-    const raw = makeRaw({
-      type: "user",
-      message: {
-        role: "user",
-        content: [{ type: "text", text: "How does this work?" }],
-      },
-    });
-    const token = createToken(raw);
+    const token = createToken(makeUserRaw([{ type: "text", text: "How does this work?" }]));
     expect(humanText(token)).toBe("How does this work?");
   });
 });

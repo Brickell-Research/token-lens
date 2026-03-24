@@ -1,11 +1,23 @@
+import { costUsd, displayWidth, flattenNodes } from "../token";
 import type { Node } from "../types";
+
+export function annotate(nodes: Node[], depth = 0): void {
+  for (const node of nodes) {
+    node.depth = depth;
+    annotate(node.children, depth + 1);
+    const childTokens = node.children.reduce((sum, c) => sum + (c.subtreeTokens ?? 0), 0);
+    const childCost = node.children.reduce((sum, c) => sum + (c.subtreeCost ?? 0), 0);
+    node.subtreeTokens = Math.max(displayWidth(node.token), 1) + childTokens;
+    node.subtreeCost = costUsd(node.token) + childCost;
+  }
+}
 
 const CANVAS_WIDTH = 1200;
 const ROW_HEIGHT = 32;
 const MIN_THREAD_WIDTH = 80;
 
 export function layout(nodes: Node[]): number {
-  const maxDepth = allNodes(nodes).reduce((max, n) => Math.max(max, n.depth ?? 0), 0);
+  const maxDepth = flattenNodes(nodes).reduce((max, n) => Math.max(max, n.depth ?? 0), 0);
   const effectiveWidth = Math.max(CANVAS_WIDTH, nodes.length * MIN_THREAD_WIDTH);
 
   const total = nodes.reduce((sum, n) => sum + (n.subtreeTokens ?? 0), 0);
@@ -40,8 +52,4 @@ function positionCost(nodes: Node[], x: number, scale: number, maxDepth: number)
     node.costW = Math.round(cursor) - start;
     positionCost(node.children, node.costX, scale, maxDepth);
   }
-}
-
-function allNodes(nodes: Node[]): Node[] {
-  return nodes.flatMap((n) => [n, ...allNodes(n.children)]);
 }

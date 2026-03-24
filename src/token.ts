@@ -1,5 +1,5 @@
 import { getRatesForModel } from "./pricing";
-import type { ContentBlock, RawEvent, Token } from "./types";
+import type { ContentBlock, Node, RawEvent, Token } from "./types";
 
 export function createToken(raw: RawEvent): Token {
   const msg = raw.message ?? {};
@@ -56,24 +56,25 @@ export function isAssistant(token: Token): boolean {
 }
 
 export function humanText(token: Token): string {
-  const strBlock = token.content.find((b): b is string => typeof b === "string");
-  if (strBlock !== undefined) return strBlock;
-  const textBlock = token.content.find(
-    (b): b is ContentBlock => typeof b === "object" && b !== null && b.type === "text",
+  for (const b of token.content) {
+    if (typeof b === "string") return b;
+    if (typeof b === "object" && b !== null && b.type === "text") return b.text ?? "";
+  }
+  return "";
+}
+
+function contentBlocks(token: Token, type: string): ContentBlock[] {
+  return token.content.filter(
+    (b): b is ContentBlock => typeof b === "object" && b !== null && b.type === type,
   );
-  return textBlock?.text ?? "";
 }
 
 export function toolUses(token: Token): ContentBlock[] {
-  return token.content.filter(
-    (b): b is ContentBlock => typeof b === "object" && b !== null && b.type === "tool_use",
-  );
+  return contentBlocks(token, "tool_use");
 }
 
 export function toolResults(token: Token): ContentBlock[] {
-  return token.content.filter(
-    (b): b is ContentBlock => typeof b === "object" && b !== null && b.type === "tool_result",
-  );
+  return contentBlocks(token, "tool_result");
 }
 
 export function isHumanPrompt(token: Token): boolean {
@@ -91,4 +92,8 @@ export function isTaskNotification(token: Token): boolean {
 export function taskNotificationSummary(token: Token): string | null {
   const match = humanText(token).match(/<summary>([\s\S]*?)<\/summary>/);
   return match ? match[1].trim() : null;
+}
+
+export function flattenNodes(nodes: Node[]): Node[] {
+  return nodes.flatMap((n) => [n, ...flattenNodes(n.children)]);
 }

@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, join } from "node:path";
-import { startJsonlSource } from "../sources/jsonl";
+import { join } from "node:path";
+import { activeJsonl, activeOrLatestJsonl, tailFile } from "../session";
 import type { RawEvent } from "../types";
 
 export interface RecordOptions {
@@ -10,59 +10,39 @@ export interface RecordOptions {
   output?: string;
 }
 
-export class RecordCommand {
-  private opts: RecordOptions;
+export async function record(opts: RecordOptions): Promise<void> {
+  const sessionsDir = join(homedir(), ".token-lens", "sessions");
+  const outputPath = opts.output ?? join(sessionsDir, `${Date.now()}.json`);
+  mkdirSync(sessionsDir, { recursive: true });
 
-  constructor(opts: RecordOptions) {
-    this.opts = opts;
-  }
+  const events: RawEvent[] = [];
+  const jsonlPath = opts.projectDir ? activeJsonl(opts.projectDir) : activeOrLatestJsonl();
+  process.stderr.write(`Recording: ${jsonlPath}\n`);
+  const stop = tailFile(jsonlPath, (e) => events.push(e));
 
-  async run(): Promise<void> {
-    const { durationInSeconds } = this.opts;
-    const outputPath = this.savePath();
+  process.stderr.write(`Recording for ${opts.durationInSeconds}s... (Ctrl+C to stop early)\n`);
+  process.stderr.write(`Output: ${outputPath}\n`);
 
-    mkdirSync(dirname(outputPath), { recursive: true });
+  let finished = false;
+  const finish = () => {
+    if (finished) return;
+    finished = true;
+    stop();
+    process.stderr.write(`\nCaptured ${events.length} events\n`);
+    writeFileSync(
+      outputPath,
+      JSON.stringify(
+        events.map((e) => ({ event: e })),
+        null,
+        2,
+      ),
+    );
+    process.stderr.write(`Saved to ${outputPath}\n`);
+    process.exit(0);
+  };
 
-    const events: RawEvent[] = [];
-
-    const stop = startJsonlSource({
-      projectDir: this.opts.projectDir,
-      onEvent: (e) => events.push(e),
-    });
-
-    process.stderr.write(`Recording for ${durationInSeconds}s... (Ctrl+C to stop early)\n`);
-    process.stderr.write(`Output: ${outputPath}\n`);
-
-    let finished = false;
-
-    const finish = () => {
-      if (finished) return;
-      finished = true;
-      stop();
-      process.stderr.write(`\nCaptured ${events.length} events\n`);
-      writeFileSync(
-        outputPath,
-        JSON.stringify(
-          events.map((e) => ({ event: e })),
-          null,
-          2,
-        ),
-      );
-      process.stderr.write(`Saved to ${outputPath}\n`);
-      process.exit(0);
-    };
-
-    setTimeout(finish, durationInSeconds * 1000);
-    process.on("SIGINT", finish);
-    process.on("SIGTERM", finish);
-
-    await new Promise(() => {});
-  }
-
-  private savePath(): string {
-    if (this.opts.output) {
-      return this.opts.output;
-    }
-    return join(homedir(), ".token-lens", "sessions", `${Date.now()}.json`);
-  }
+  setTimeout(finish, opts.durationInSeconds * 1000);
+  process.on("SIGINT", finish);
+  process.on("SIGTERM", finish);
+  await new Promise(() => {});
 }
