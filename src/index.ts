@@ -7,7 +7,7 @@ const program = new Command();
 program
   .name("token-lens")
   .description("Flame graphs for Claude Code token usage")
-  .version("0.6.0");
+  .version("0.7.0");
 
 program
   .command("record")
