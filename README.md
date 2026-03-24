@@ -7,7 +7,7 @@
 [![Built with Bun](https://img.shields.io/badge/Built%20with-Bun-fbf0df?logo=bun)](https://bun.sh)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 
-Flame graphs for [Claude Code](https://claude.ai/code) token usage, grounded in a per-prompt heatmap colored by token count or estimated cost.
+Flame graphs for [Claude Code](https://claude.ai/code) token usage, grounded in a per-prompt heatmap colored by token count or estimated cost. Inspired by [Brendan Gregg's flame graphs](https://www.brendangregg.com/flamegraphs.html): if you squint, token stacks look a lot like CPU call stacks. The heatmap-plus-flame-graph combo is loosely based on [Netflix's FlameScope](https://github.com/Netflix/flamescope). If you use Claude Code heavily, you're probably already familiar with [CCUsage](https://ccusage.com/) — great for aggregate token and cost tracking. I use them in tandem; CCUsage for the totals, token-lens for the shape.
 
 ![Demo](docs/token-lens.gif)
 
