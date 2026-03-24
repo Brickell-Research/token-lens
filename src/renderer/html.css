@@ -55,6 +55,7 @@ body {
   flex-direction: column;
   height: 100%;
   color: var(--text);
+  padding-bottom: 29px;
 }
 .header {
   display: flex;
@@ -397,15 +398,30 @@ body {
   color: rgba(255, 255, 255, 0.88);
 }
 .tip {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
   padding: 6px 12px;
   font-size: 11px;
-  min-height: 28px;
+  height: 29px;
   display: flex;
   align-items: baseline;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 0;
   border-top: 1px solid var(--border);
   background: var(--bg);
+  overflow: hidden;
+}
+.tip-sep,
+.tip-tokens,
+.tip-model,
+.tip-label,
+.tip-code,
+.tip-warn {
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 .tip-sep {
   color: var(--border);

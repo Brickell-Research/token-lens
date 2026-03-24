@@ -1,9 +1,41 @@
-import { existsSync, statSync } from "node:fs";
+import { existsSync, readdirSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import type { RawEvent } from "./types";
 
 export const CLAUDE_DIR = join(homedir(), ".claude", "projects");
+export const SESSIONS_DIR = join(homedir(), ".token-lens", "sessions");
+
+export interface SessionEntry {
+  path: string;
+  source: "capture" | "live";
+  mtimeMs: number;
+  size: number;
+}
+
+export function listAllSessions(): SessionEntry[] {
+  const entries: SessionEntry[] = [];
+
+  if (existsSync(SESSIONS_DIR)) {
+    for (const f of readdirSync(SESSIONS_DIR)) {
+      if (!f.endsWith(".json")) continue;
+      const p = join(SESSIONS_DIR, f);
+      const s = statSync(p);
+      if (s.isFile())
+        entries.push({ path: p, source: "capture", mtimeMs: s.mtimeMs, size: s.size });
+    }
+  }
+
+  if (existsSync(CLAUDE_DIR)) {
+    for (const f of new Bun.Glob("**/*.jsonl").scanSync(CLAUDE_DIR)) {
+      const p = join(CLAUDE_DIR, f);
+      const s = statSync(p);
+      entries.push({ path: p, source: "live", mtimeMs: s.mtimeMs, size: s.size });
+    }
+  }
+
+  return entries.sort((a, b) => b.mtimeMs - a.mtimeMs);
+}
 
 export function encodedCwd(dir?: string): string {
   return (dir ?? process.cwd()).replace(/[^a-zA-Z0-9]/g, "-");
