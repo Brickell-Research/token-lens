@@ -28,7 +28,46 @@ export function renderHtml(filePath: string): string {
 }
 
 export function injectAutoRefresh(html: string, intervalMs = 2000): string {
-  const script = `<script>setInterval(function(){location.reload();},${intervalMs});</script>`;
+  const script = `<script>(function(){
+  try{
+    var s=JSON.parse(sessionStorage.getItem('tl-watch-state')||'null');
+    if(s){
+      var curTheme=document.documentElement.getAttribute('data-theme');
+      if(s.theme&&s.theme!==curTheme&&window.toggleTheme)toggleTheme();
+      if(s.costMode&&window.toggleCostView)toggleCostView();
+      if(s.sorted&&window.sortHeatmap)sortHeatmap();
+      if(s.activeIdx>=0&&window.openPrompt)openPrompt(s.activeIdx);
+      var p=document.getElementById('summary-panel');
+      var pShown=!!(p&&p.style.display!=='none');
+      if(s.summaryOpen!==pShown&&window.toggleSummary)toggleSummary();
+      requestAnimationFrame(function(){
+        window.scrollTo(s.scrollX||0,s.scrollY||0);
+        var fw=document.getElementById('flame-wrap');
+        if(fw)fw.scrollLeft=s.flameScroll||0;
+      });
+    }
+  }catch(e){}
+  setInterval(function(){
+    try{
+      var cb=document.getElementById('cost-btn');
+      var sb=document.getElementById('hm-sort-btn');
+      var hma=document.querySelector('.hm-cell.hm-active');
+      var sp=document.getElementById('summary-panel');
+      var fw=document.getElementById('flame-wrap');
+      sessionStorage.setItem('tl-watch-state',JSON.stringify({
+        theme:document.documentElement.getAttribute('data-theme'),
+        costMode:!!(cb&&cb.classList.contains('active')),
+        sorted:!!(sb&&sb.classList.contains('active')),
+        activeIdx:hma?+(hma.getAttribute('data-idx')):-1,
+        summaryOpen:!!(sp&&sp.style.display!=='none'),
+        scrollX:window.scrollX,
+        scrollY:window.scrollY,
+        flameScroll:fw?fw.scrollLeft:0
+      }));
+    }catch(e){}
+    location.reload();
+  },${intervalMs});
+})();</script>`;
   return html.replace("</body>", `${script}\n</body>`);
 }
 
