@@ -2,12 +2,13 @@
 import { Command } from "commander";
 import { record } from "./commands/record";
 import { render } from "./commands/render";
+import { watch } from "./commands/watch";
 
 const program = new Command();
 program
   .name("token-lens")
   .description("Flame graphs for Claude Code token usage")
-  .version("0.10.0");
+  .version("0.11.0");
 
 program
   .command("record")
@@ -41,6 +42,20 @@ program
     await render({
       filePath: opts.filePath,
       output: opts.output,
+    });
+  });
+
+program
+  .command("watch")
+  .description("Watch a session and serve a live-updating flame graph")
+  .option("--file-path <path>", "Session file (JSONL or JSON)")
+  .option("--output <path>", "Output HTML path (default: flame.html)")
+  .option("--interval <ms>", "Browser reload interval in ms (default: 2000)")
+  .action(async (opts) => {
+    await watch({
+      filePath: opts.filePath,
+      output: opts.output,
+      intervalMs: opts.interval ? parseInt(opts.interval, 10) : undefined,
     });
   });
 
