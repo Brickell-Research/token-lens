@@ -29,16 +29,15 @@ export function renderHtml(filePath: string): string {
 
 export function injectAutoRefresh(html: string, intervalMs = 2000): string {
   const script = `<script>setInterval(function(){location.reload();},${intervalMs});</script>`;
-  return html.replace("</body>", script + "\n</body>");
+  return html.replace("</body>", `${script}\n</body>`);
 }
 
 export async function watch(opts: WatchOptions): Promise<void> {
-  const filePath =
-    opts.projectDir
-      ? activeJsonl(opts.projectDir)
-      : opts.live
-        ? activeOrLatestJsonl()
-        : await resolveSessionPath(opts.filePath);
+  const filePath = opts.projectDir
+    ? activeJsonl(opts.projectDir)
+    : opts.live
+      ? activeOrLatestJsonl()
+      : await resolveSessionPath(opts.filePath);
   const output = opts.output ?? "flame.html";
   const intervalMs = opts.intervalMs ?? 2000;
 
