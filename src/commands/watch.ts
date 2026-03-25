@@ -4,11 +4,16 @@ import { parse } from "../parser";
 import { Html } from "../renderer/html";
 import { annotate, layout } from "../renderer/layout";
 import { reshape } from "../renderer/reshaper";
+import { activeJsonl, activeOrLatestJsonl } from "../session";
 import { resolveSessionPath } from "./pick-session";
 
 export interface WatchOptions {
   filePath?: string;
   output?: string;
+  /** Auto-select the active live session (skips picker) */
+  live?: boolean;
+  /** Working directory of the Claude Code session (implies --live) */
+  projectDir?: string;
   /** Browser reload interval in milliseconds (default: 2000) */
   intervalMs?: number;
 }
@@ -28,7 +33,12 @@ export function injectAutoRefresh(html: string, intervalMs = 2000): string {
 }
 
 export async function watch(opts: WatchOptions): Promise<void> {
-  const filePath = await resolveSessionPath(opts.filePath);
+  const filePath =
+    opts.projectDir
+      ? activeJsonl(opts.projectDir)
+      : opts.live
+        ? activeOrLatestJsonl()
+        : await resolveSessionPath(opts.filePath);
   const output = opts.output ?? "flame.html";
   const intervalMs = opts.intervalMs ?? 2000;
 

@@ -29,6 +29,13 @@ open flame.html
 
 If you have multiple sessions, `render` shows an interactive picker. With only one session it auto-selects it.
 
+Watch a live session as you work — the flame graph re-renders automatically whenever Claude Code writes new events:
+
+```sh
+token-lens watch --live
+# browser opens flame.html and reloads every 2s
+```
+
 Record a bounded window while you work:
 
 ```sh
@@ -45,6 +52,10 @@ token-lens record --output=my-session.json              # save to a specific pat
 token-lens record --project-dir=/path/to/project        # record a specific project's session
 token-lens render --file-path=my-session.json           # render a specific capture
 token-lens render --output=report.html                  # write HTML to a custom path
+token-lens watch --live                                 # watch the active session
+token-lens watch --project-dir=/path/to/project         # watch a specific project's session
+token-lens watch --file-path=session.json               # watch a specific capture file
+token-lens watch --interval=1000                        # reload every 1s instead of 2s
 ```
 
 ## License

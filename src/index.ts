@@ -48,11 +48,15 @@ program
 program
   .command("watch")
   .description("Watch a session and serve a live-updating flame graph")
+  .option("--live", "Auto-select the active Claude Code session (skips picker)")
+  .option("--project-dir <path>", "Working directory of the Claude Code session (implies --live)")
   .option("--file-path <path>", "Session file (JSONL or JSON)")
   .option("--output <path>", "Output HTML path (default: flame.html)")
   .option("--interval <ms>", "Browser reload interval in ms (default: 2000)")
   .action(async (opts) => {
     await watch({
+      live: opts.live,
+      projectDir: opts.projectDir,
       filePath: opts.filePath,
       output: opts.output,
       intervalMs: opts.interval ? parseInt(opts.interval, 10) : undefined,
